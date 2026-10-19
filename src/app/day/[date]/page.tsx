@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import DayPlanner from "@/components/DayPlanner";
+import { ArrowLeftIcon } from "@/components/icons";
 
 export default function DayPage({
   params,
@@ -12,9 +13,10 @@ export default function DayPage({
     <div className="space-y-4">
       <Link
         href="/calendar"
-        className="inline-block text-sm text-brand-700 hover:underline"
+        className="btn btn-ghost btn-sm"
       >
-        ← กลับไปปฏิทิน
+        <ArrowLeftIcon size={18} />
+        กลับไปปฏิทิน
       </Link>
       <DayPlanner date={params.date} />
     </div>

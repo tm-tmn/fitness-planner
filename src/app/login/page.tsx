@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { Buddy } from "@/components/icons";
 
 type Mode = "signin" | "signup";
 
@@ -74,19 +75,18 @@ function LoginForm() {
   }
 
   return (
-    <div className="mx-auto mt-10 max-w-sm space-y-6">
+    <div className="mx-auto mt-6 max-w-sm space-y-4">
       <div className="text-center">
-        <h1 className="text-2xl font-bold text-brand-700">
-          🏋️ Fit & Meal Planner
-        </h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <Buddy size={140} mood="cheer" className="bob mx-auto" />
+        <h1 className="text-2xl">Fit &amp; Meal Planner</h1>
+        <p className="mt-1 text-sm">
           {mode === "signin"
             ? "เข้าสู่ระบบเพื่อดูตารางของคุณ"
             : "สมัครสมาชิกใหม่"}
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form onSubmit={handleSubmit} className="card space-y-3 p-5">
         {mode === "signup" && (
           <input
             className="input"
@@ -115,12 +115,12 @@ function LoginForm() {
         />
 
         {error && (
-          <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          <div className="rounded-xl border-[3px] border-ink bg-candy px-3 py-2 text-sm">
             {error}
           </div>
         )}
         {info && (
-          <div className="rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700">
+          <div className="rounded-xl border-[3px] border-ink bg-mint-soft px-3 py-2 text-sm">
             {info}
           </div>
         )}
@@ -128,7 +128,7 @@ function LoginForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-md bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+          className="btn btn-pink w-full"
         >
           {loading
             ? "กำลังดำเนินการ..."
@@ -138,12 +138,12 @@ function LoginForm() {
         </button>
       </form>
 
-      <p className="text-center text-sm text-gray-500">
+      <p className="text-center text-sm">
         {mode === "signin" ? (
           <>
             ยังไม่มีบัญชี?{" "}
             <button
-              className="font-medium text-brand-700 hover:underline"
+              className="font-semibold underline decoration-wavy underline-offset-4"
               onClick={() => {
                 setMode("signup");
                 setError(null);
@@ -157,7 +157,7 @@ function LoginForm() {
           <>
             มีบัญชีอยู่แล้ว?{" "}
             <button
-              className="font-medium text-brand-700 hover:underline"
+              className="font-semibold underline decoration-wavy underline-offset-4"
               onClick={() => {
                 setMode("signin");
                 setError(null);
@@ -170,19 +170,6 @@ function LoginForm() {
         )}
       </p>
 
-      <style jsx global>{`
-        .input {
-          width: 100%;
-          border: 1px solid #d1d5db;
-          border-radius: 0.375rem;
-          padding: 0.5rem 0.75rem;
-          font-size: 0.875rem;
-        }
-        .input:focus {
-          outline: none;
-          border-color: #16a34a;
-        }
-      `}</style>
     </div>
   );
 }

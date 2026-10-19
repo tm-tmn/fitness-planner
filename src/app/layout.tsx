@@ -14,9 +14,23 @@ export default function RootLayout({
 }) {
   return (
     <html lang="th">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin=""
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Mali:wght@400;600&family=Mitr:wght@400;500&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body>
         <NavBar />
-        <main className="mx-auto max-w-3xl px-4 py-6">{children}</main>
+        <main className="mx-auto max-w-3xl px-4 pb-28 pt-6 md:pb-10">
+          {children}
+        </main>
       </body>
     </html>
   );

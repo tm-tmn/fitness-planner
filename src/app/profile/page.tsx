@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Profile } from "@/lib/types";
+import { Buddy, TargetIcon } from "@/components/icons";
 import {
   ACTIVITY_LABELS,
   ActivityLevel,
@@ -114,13 +115,16 @@ export default function ProfilePage() {
     setSaving(false);
   }
 
-  if (loading || !profile) return <p className="text-gray-500">กำลังโหลด...</p>;
+  if (loading || !profile) return <p>กำลังโหลด...</p>;
 
   return (
-    <div className="max-w-md space-y-5">
-      <h1 className="text-xl font-bold">โปรไฟล์ของฉัน</h1>
+    <div className="card max-w-md space-y-5 p-5">
+      <div className="flex items-center gap-3">
+        <Buddy size={64} />
+        <h1 className="text-xl">โปรไฟล์ของฉัน</h1>
+      </div>
       {error && (
-        <div className="rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">
+        <div className="rounded-xl border-[3px] border-ink bg-candy px-4 py-2 text-sm">
           เกิดข้อผิดพลาด: {error}
         </div>
       )}
@@ -215,22 +219,22 @@ export default function ProfilePage() {
         />
       </Field>
 
-      <div className="rounded-lg border border-gray-200 bg-white p-3">
+      <div className="rounded-2xl border-[3px] border-ink bg-[#FFF3C4] p-3">
         <div className="mb-2 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-700">
-            🎯 เป้าแคลอรี่ & โปรตีนต่อวัน
+          <h3 className="flex items-center gap-2">
+            <TargetIcon size={26} /> เป้าแคลอรี่ &amp; โปรตีนต่อวัน
           </h3>
           <button
             type="button"
             onClick={applyCalculatedTargets}
             disabled={!canCalculate}
-            className="text-xs font-medium text-brand-700 hover:underline disabled:cursor-not-allowed disabled:text-gray-300"
+            className="btn btn-mint btn-sm"
           >
             คำนวณให้อัตโนมัติ
           </button>
         </div>
         {!canCalculate && (
-          <p className="mb-2 text-xs text-gray-400">
+          <p className="mb-2 text-sm opacity-70">
             กรอกเพศ อายุ น้ำหนัก ส่วนสูง และระดับกิจกรรมให้ครบก่อน
           </p>
         )}
@@ -276,29 +280,15 @@ export default function ProfilePage() {
         <button
           onClick={save}
           disabled={saving}
-          className="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+          className="btn btn-pink"
         >
           {saving ? "กำลังบันทึก..." : "บันทึก"}
         </button>
         {savedAt && (
-          <span className="text-sm text-gray-400">บันทึกแล้ว ✓</span>
+          <span className="text-sm">บันทึกแล้ว ✓</span>
         )}
       </div>
 
-      <style jsx global>{`
-        .input {
-          width: 100%;
-          border: 1px solid #d1d5db;
-          border-radius: 0.375rem;
-          padding: 0.5rem 0.75rem;
-          font-size: 0.875rem;
-          background-color: white;
-        }
-        .input:focus {
-          outline: none;
-          border-color: #16a34a;
-        }
-      `}</style>
     </div>
   );
 }
@@ -312,7 +302,7 @@ function Field({
 }) {
   return (
     <label className="block space-y-1">
-      <span className="text-sm font-medium text-gray-600">{label}</span>
+      <span className="text-sm font-semibold">{label}</span>
       {children}
     </label>
   );

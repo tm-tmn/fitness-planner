@@ -16,6 +16,7 @@ import {
 } from "date-fns";
 import { th } from "date-fns/locale";
 import { createClient } from "@/lib/supabase/client";
+import { ArrowLeftIcon, ArrowRightIcon, StarIcon } from "@/components/icons";
 
 const WEEKDAYS = ["จ", "อ", "พ", "พฤ", "ศ", "ส", "อา"];
 
@@ -70,59 +71,62 @@ export default function CalendarPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="card flex items-center justify-between p-2">
         <button
           onClick={() => setMonthDate((d) => subMonths(d, 1))}
-          className="rounded-md px-3 py-1 text-gray-600 hover:bg-gray-100"
+          className="btn btn-ghost btn-sm"
+          aria-label="เดือนก่อนหน้า"
         >
-          ←
+          <ArrowLeftIcon size={20} />
         </button>
-        <h1 className="text-lg font-bold">
+        <h1 className="text-lg">
           {format(monthDate, "MMMM yyyy", { locale: th })}
         </h1>
         <button
           onClick={() => setMonthDate((d) => addMonths(d, 1))}
-          className="rounded-md px-3 py-1 text-gray-600 hover:bg-gray-100"
+          className="btn btn-ghost btn-sm"
+          aria-label="เดือนถัดไป"
         >
-          →
+          <ArrowRightIcon size={20} />
         </button>
       </div>
 
-      <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-gray-400">
-        {WEEKDAYS.map((w) => (
-          <div key={w}>{w}</div>
-        ))}
+      <div className="card p-2 sm:p-3">
+        <div className="mb-1 grid grid-cols-7 gap-1 text-center font-display text-sm">
+          {WEEKDAYS.map((w) => (
+            <div key={w}>{w}</div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-7 gap-1">
+          {days.map((day) => {
+            const dateStr = format(day, "yyyy-MM-dd");
+            const inMonth = isSameMonth(day, monthDate);
+            const hasData = daysWithData.has(dateStr);
+            return (
+              <Link
+                key={dateStr}
+                href={`/day/${dateStr}`}
+                aria-label={`${format(day, "d MMMM", { locale: th })}${hasData ? " มีแผน" : ""}`}
+                className={`flex aspect-square flex-col items-center justify-center rounded-xl border-[2.5px] text-sm transition hover:-translate-y-0.5 ${
+                  isToday(day)
+                    ? "border-ink bg-sun font-display shadow-pop-sm"
+                    : inMonth
+                    ? "border-ink/30 bg-white hover:border-ink hover:bg-mint-soft"
+                    : "border-transparent opacity-30"
+                }`}
+              >
+                <span>{format(day, "d")}</span>
+                {hasData && <StarIcon size={14} />}
+              </Link>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-1">
-        {days.map((day) => {
-          const dateStr = format(day, "yyyy-MM-dd");
-          const inMonth = isSameMonth(day, monthDate);
-          const hasData = daysWithData.has(dateStr);
-          return (
-            <Link
-              key={dateStr}
-              href={`/day/${dateStr}`}
-              className={`flex aspect-square flex-col items-center justify-center rounded-lg border text-sm transition ${
-                isToday(day)
-                  ? "border-brand-600 bg-brand-50 font-bold text-brand-700"
-                  : inMonth
-                  ? "border-gray-200 bg-white text-gray-700 hover:border-brand-400"
-                  : "border-transparent text-gray-300"
-              }`}
-            >
-              <span>{format(day, "d")}</span>
-              {hasData && (
-                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-brand-500" />
-              )}
-            </Link>
-          );
-        })}
-      </div>
-
-      {loading && <p className="text-sm text-gray-400">กำลังโหลด...</p>}
-      <p className="text-xs text-gray-400">
-        จุดสีเขียวใต้ตัวเลข = วันที่มีแผนอาหาร/ออกกำลังกายแล้ว คลิกวันไหนก็ได้เพื่อดู/เพิ่มแผน
+      {loading && <p className="text-sm opacity-60">กำลังโหลด...</p>}
+      <p className="flex items-center gap-1 text-sm">
+        <StarIcon size={16} /> = วันที่มีแผนอาหาร/ออกกำลังกายแล้ว แตะวันไหนก็ได้เพื่อดูหรือเพิ่มแผน
       </p>
     </div>
   );

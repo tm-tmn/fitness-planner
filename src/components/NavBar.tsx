@@ -4,12 +4,20 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import {
+  Buddy,
+  CalendarIcon,
+  DoorIcon,
+  ListIcon,
+  SmileIcon,
+  SunIcon,
+} from "@/components/icons";
 
 const links = [
-  { href: "/", label: "วันนี้" },
-  { href: "/calendar", label: "ปฏิทิน" },
-  { href: "/program", label: "โปรแกรม" },
-  { href: "/profile", label: "โปรไฟล์" },
+  { href: "/", label: "วันนี้", Icon: SunIcon },
+  { href: "/calendar", label: "ปฏิทิน", Icon: CalendarIcon },
+  { href: "/program", label: "โปรแกรม", Icon: ListIcon },
+  { href: "/profile", label: "โปรไฟล์", Icon: SmileIcon },
 ];
 
 export default function NavBar() {
@@ -38,47 +46,72 @@ export default function NavBar() {
     router.refresh();
   }
 
+  const isActive = (href: string) =>
+    href === "/" ? pathname === "/" : pathname.startsWith(href);
+
   return (
-    <header className="sticky top-0 z-10 border-b border-gray-200 bg-white/90 backdrop-blur">
-      <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-2 px-4 py-3">
-        <Link href="/" className="text-lg font-bold text-brand-700">
-          🏋️ Fit & Meal Planner
-        </Link>
-        <nav className="flex flex-wrap items-center gap-1">
-          {links.map((link) => {
-            const active =
-              link.href === "/"
-                ? pathname === "/"
-                : pathname.startsWith(link.href);
-            return (
+    <>
+      <header className="sticky top-0 z-10 border-b-[3px] border-ink bg-sun">
+        <div className="mx-auto flex max-w-3xl items-center justify-between gap-2 px-4 py-2">
+          <Link href="/" className="flex items-center gap-2 font-display text-lg">
+            <Buddy size={40} />
+            <span>Fit &amp; Meal</span>
+          </Link>
+
+          {/* เมนูบนจอกว้าง */}
+          <nav className="hidden items-center gap-1 md:flex" aria-label="เมนูหลัก">
+            {links.map(({ href, label, Icon }) => (
               <Link
-                key={link.href}
-                href={link.href}
-                className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
-                  active
-                    ? "bg-brand-600 text-white"
-                    : "text-gray-600 hover:bg-gray-100"
+                key={href}
+                href={href}
+                aria-current={isActive(href) ? "page" : undefined}
+                className={`tab ${isActive(href) ? "tab-active" : ""}`}
+              >
+                <Icon size={26} />
+                {label}
+              </Link>
+            ))}
+          </nav>
+
+          {email && (
+            <div className="flex items-center gap-2">
+              <span className="hidden max-w-[10rem] truncate text-xs lg:inline">
+                {email}
+              </span>
+              <button onClick={signOut} className="btn btn-ghost btn-sm">
+                <DoorIcon size={20} />
+                <span className="hidden sm:inline">ออกจากระบบ</span>
+                <span className="sm:hidden">ออก</span>
+              </button>
+            </div>
+          )}
+        </div>
+      </header>
+
+      {/* แท็บล่างบนมือถือ */}
+      <nav
+        aria-label="เมนูหลัก"
+        className="fixed inset-x-0 bottom-0 z-10 border-t-[3px] border-ink bg-sun md:hidden"
+      >
+        <ul className="mx-auto grid max-w-md grid-cols-4 gap-1 px-2 py-1.5">
+          {links.map(({ href, label, Icon }) => (
+            <li key={href}>
+              <Link
+                href={href}
+                aria-current={isActive(href) ? "page" : undefined}
+                className={`flex flex-col items-center rounded-2xl border-[3px] px-1 py-0.5 text-xs font-display ${
+                  isActive(href)
+                    ? "border-ink bg-bubble text-white shadow-pop-sm"
+                    : "border-transparent"
                 }`}
               >
-                {link.label}
+                <Icon size={26} />
+                {label}
               </Link>
-            );
-          })}
-          {email && (
-            <span className="ml-2 hidden text-xs text-gray-400 sm:inline">
-              {email}
-            </span>
-          )}
-          {email && (
-            <button
-              onClick={signOut}
-              className="rounded-full px-3 py-1.5 text-sm font-medium text-gray-500 hover:bg-gray-100"
-            >
-              ออกจากระบบ
-            </button>
-          )}
-        </nav>
-      </div>
-    </header>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </>
   );
 }
