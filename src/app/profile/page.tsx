@@ -1,10 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { useEffect, useMemo, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { Profile } from "@/lib/types";
+import {
+  ACTIVITY_LABELS,
+  ActivityLevel,
+  Gender,
+  calculateTargets,
+} from "@/lib/calorie";
+
+const emptyProfile = (): Profile => ({
+  id: "",
+  full_name: "",
+  gender: null,
+  age: null,
+  weight_kg: null,
+  height_cm: null,
+  activity_level: null,
+  goal: "",
+  daily_calorie_target: null,
+  daily_protein_target_g: null,
+  notes: "",
+  updated_at: new Date().toISOString(),
+});
 
 export default function ProfilePage() {
+  const supabase = useMemo(() => createClient(), []);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -17,28 +39,35 @@ export default function ProfilePage() {
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
-        .limit(1)
         .maybeSingle();
       if (error) setError(error.message);
-      setProfile(
-        (data as Profile) ?? {
-          id: "",
-          full_name: "",
-          age: null,
-          weight_kg: null,
-          height_cm: null,
-          goal: "",
-          daily_calorie_target: null,
-          notes: "",
-          updated_at: new Date().toISOString(),
-        }
-      );
+      setProfile((data as Profile) ?? emptyProfile());
       setLoading(false);
     })();
-  }, []);
+  }, [supabase]);
 
   function update<K extends keyof Profile>(key: K, value: Profile[K]) {
     setProfile((p) => (p ? { ...p, [key]: value } : p));
+  }
+
+  const canCalculate =
+    !!profile?.gender &&
+    !!profile?.age &&
+    !!profile?.weight_kg &&
+    !!profile?.height_cm &&
+    !!profile?.activity_level;
+
+  function applyCalculatedTargets() {
+    if (!profile || !canCalculate) return;
+    const result = calculateTargets({
+      gender: profile.gender as Gender,
+      age: profile.age as number,
+      weightKg: profile.weight_kg as number,
+      heightCm: profile.height_cm as number,
+      activityLevel: profile.activity_level as ActivityLevel,
+    });
+    update("daily_calorie_target", result.calorieTarget);
+    update("daily_protein_target_g", result.proteinTargetG);
   }
 
   async function save() {
@@ -48,11 +77,14 @@ export default function ProfilePage() {
 
     const payload = {
       full_name: profile.full_name,
+      gender: profile.gender,
       age: profile.age,
       weight_kg: profile.weight_kg,
       height_cm: profile.height_cm,
+      activity_level: profile.activity_level,
       goal: profile.goal,
       daily_calorie_target: profile.daily_calorie_target,
+      daily_protein_target_g: profile.daily_protein_target_g,
       notes: profile.notes,
       updated_at: new Date().toISOString(),
     };
@@ -101,6 +133,18 @@ export default function ProfilePage() {
         />
       </Field>
 
+      <Field label="เพศ (ใช้คำนวณแคลอรี่)">
+        <select
+          className="input"
+          value={profile.gender ?? ""}
+          onChange={(e) => update("gender", (e.target.value || null) as Gender | null)}
+        >
+          <option value="">เลือก...</option>
+          <option value="male">ชาย</option>
+          <option value="female">หญิง</option>
+        </select>
+      </Field>
+
       <div className="grid grid-cols-2 gap-4">
         <Field label="อายุ (ปี)">
           <input
@@ -140,20 +184,27 @@ export default function ProfilePage() {
             }
           />
         </Field>
-        <Field label="เป้าแคลอรี่/วัน">
-          <input
-            type="number"
-            className="input"
-            value={profile.daily_calorie_target ?? ""}
-            onChange={(e) =>
-              update(
-                "daily_calorie_target",
-                e.target.value ? Number(e.target.value) : null
-              )
-            }
-          />
-        </Field>
       </div>
+
+      <Field label="ระดับกิจกรรม">
+        <select
+          className="input"
+          value={profile.activity_level ?? ""}
+          onChange={(e) =>
+            update(
+              "activity_level",
+              (e.target.value || null) as ActivityLevel | null
+            )
+          }
+        >
+          <option value="">เลือก...</option>
+          {Object.entries(ACTIVITY_LABELS).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </Field>
 
       <Field label="เป้าหมาย">
         <input
@@ -163,6 +214,55 @@ export default function ProfilePage() {
           onChange={(e) => update("goal", e.target.value)}
         />
       </Field>
+
+      <div className="rounded-lg border border-gray-200 bg-white p-3">
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-gray-700">
+            🎯 เป้าแคลอรี่ & โปรตีนต่อวัน
+          </h3>
+          <button
+            type="button"
+            onClick={applyCalculatedTargets}
+            disabled={!canCalculate}
+            className="text-xs font-medium text-brand-700 hover:underline disabled:cursor-not-allowed disabled:text-gray-300"
+          >
+            คำนวณให้อัตโนมัติ
+          </button>
+        </div>
+        {!canCalculate && (
+          <p className="mb-2 text-xs text-gray-400">
+            กรอกเพศ อายุ น้ำหนัก ส่วนสูง และระดับกิจกรรมให้ครบก่อน
+          </p>
+        )}
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="แคลอรี่/วัน (kcal)">
+            <input
+              type="number"
+              className="input"
+              value={profile.daily_calorie_target ?? ""}
+              onChange={(e) =>
+                update(
+                  "daily_calorie_target",
+                  e.target.value ? Number(e.target.value) : null
+                )
+              }
+            />
+          </Field>
+          <Field label="โปรตีน/วัน (ก.)">
+            <input
+              type="number"
+              className="input"
+              value={profile.daily_protein_target_g ?? ""}
+              onChange={(e) =>
+                update(
+                  "daily_protein_target_g",
+                  e.target.value ? Number(e.target.value) : null
+                )
+              }
+            />
+          </Field>
+        </div>
+      </div>
 
       <Field label="บันทึกเพิ่มเติม">
         <textarea
@@ -192,6 +292,7 @@ export default function ProfilePage() {
           border-radius: 0.375rem;
           padding: 0.5rem 0.75rem;
           font-size: 0.875rem;
+          background-color: white;
         }
         .input:focus {
           outline: none;

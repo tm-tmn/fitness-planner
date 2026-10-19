@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { createClient } from "@/lib/supabase/client";
 import {
   MealEntry,
   MealType,
@@ -21,6 +21,7 @@ function formatDateHeading(dateStr: string) {
 }
 
 export default function DayPlanner({ date }: { date: string }) {
+  const supabase = useMemo(() => createClient(), []);
   const [meals, setMeals] = useState<MealEntry[]>([]);
   const [workouts, setWorkouts] = useState<WorkoutEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -149,22 +150,33 @@ export default function DayPlanner({ date }: { date: string }) {
           {workouts.map((w) => (
             <li
               key={w.id}
-              className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2"
+              className="flex items-start justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2"
             >
-              <label className="flex flex-1 items-center gap-2">
+              <label className="flex flex-1 items-start gap-2">
                 <input
                   type="checkbox"
                   checked={w.is_done}
                   onChange={(e) => toggleWorkout(w.id, e.target.checked)}
-                  className="h-4 w-4 accent-brand-600"
+                  className="mt-0.5 h-4 w-4 accent-brand-600"
                 />
-                <span className={w.is_done ? "text-gray-400 line-through" : ""}>
-                  {w.exercise_name}
+                <span>
+                  <span
+                    className={
+                      w.is_done ? "text-gray-400 line-through" : "font-medium"
+                    }
+                  >
+                    {w.exercise_name}
+                  </span>
+                  {w.notes && (
+                    <span className="mt-0.5 block text-xs text-gray-400">
+                      {w.notes}
+                    </span>
+                  )}
                 </span>
               </label>
               <button
                 onClick={() => deleteWorkout(w.id)}
-                className="text-xs text-gray-400 hover:text-red-500"
+                className="shrink-0 text-xs text-gray-400 hover:text-red-500"
                 aria-label="ลบ"
               >
                 ลบ

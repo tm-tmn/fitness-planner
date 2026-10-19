@@ -15,11 +15,12 @@ import {
   subMonths,
 } from "date-fns";
 import { th } from "date-fns/locale";
-import { supabase } from "@/lib/supabaseClient";
+import { createClient } from "@/lib/supabase/client";
 
 const WEEKDAYS = ["จ", "อ", "พ", "พฤ", "ศ", "ส", "อา"];
 
 export default function CalendarPage() {
+  const supabase = useMemo(() => createClient(), []);
   const [monthDate, setMonthDate] = useState(new Date());
   const [daysWithData, setDaysWithData] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);

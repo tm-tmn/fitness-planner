@@ -41,11 +41,14 @@ export interface WorkoutEntry {
 export interface Profile {
   id: string;
   full_name: string | null;
+  gender: "male" | "female" | null;
   age: number | null;
   weight_kg: number | null;
   height_cm: number | null;
+  activity_level: "sedentary" | "light" | "moderate" | "active" | null;
   goal: string | null;
   daily_calorie_target: number | null;
+  daily_protein_target_g: number | null;
   notes: string | null;
   updated_at: string;
 }

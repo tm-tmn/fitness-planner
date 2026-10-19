@@ -1,25 +1,33 @@
 -- ========================================================
--- Fitness & Meal Planner — Supabase schema
--- วิธีใช้: ไปที่ Supabase Dashboard > SQL Editor > New query
--- วางไฟล์นี้ทั้งหมดแล้วกด Run
+-- Fitness & Meal Planner — Supabase schema (v2: multi-user)
+--
+-- ใช้ไฟล์นี้สำหรับ "โปรเจกต์ Supabase ใหม่" เท่านั้น
+-- ถ้าคุณเคยรัน schema เวอร์ชันแรก (แบบคนเดียว ไม่มี login) ไปแล้ว
+-- ให้ใช้ supabase/migration_v1_to_v2.sql แทน (ไม่ใช่ไฟล์นี้)
+--
+-- วิธีใช้: Supabase Dashboard > SQL Editor > New query > วางทั้งหมด > Run
 -- ========================================================
 
--- โปรไฟล์ส่วนตัว (เก็บแถวเดียว เพราะใช้คนเดียว)
+-- โปรไฟล์ส่วนตัว: 1 คน 1 แถว ผูกกับบัญชีผู้ใช้ (auth.users) โดยตรง
 create table if not exists profiles (
-  id uuid primary key default gen_random_uuid(),
+  id uuid primary key default auth.uid() references auth.users (id) on delete cascade,
   full_name text,
+  gender text check (gender in ('male','female')),
   age int,
   weight_kg numeric(5,2),
   height_cm numeric(5,2),
-  goal text,                -- เช่น "ลดไขมัน", "เพิ่มกล้ามเนื้อ"
+  activity_level text check (activity_level in ('sedentary','light','moderate','active')),
+  goal text,                       -- เช่น "ลดไขมัน", "เพิ่มกล้ามเนื้อ"
   daily_calorie_target int,
+  daily_protein_target_g int,
   notes text,
   updated_at timestamptz not null default now()
 );
 
--- มื้ออาหารตามวัน
+-- มื้ออาหารตามวัน (ของแต่ละคน)
 create table if not exists meal_entries (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
   entry_date date not null,
   meal_type text not null check (meal_type in ('breakfast','lunch','dinner','snack')),
   food_name text not null,
@@ -29,9 +37,10 @@ create table if not exists meal_entries (
   created_at timestamptz not null default now()
 );
 
--- ตารางออกกำลังกายตามวัน
+-- ตารางออกกำลังกายตามวัน (ของแต่ละคน)
 create table if not exists workout_entries (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
   entry_date date not null,
   time_of_day text,         -- เช่น "เช้า", "เย็น", "18:00"
   exercise_name text not null,
@@ -43,33 +52,24 @@ create table if not exists workout_entries (
   created_at timestamptz not null default now()
 );
 
-create index if not exists idx_meal_entries_date on meal_entries (entry_date);
-create index if not exists idx_workout_entries_date on workout_entries (entry_date);
+create index if not exists idx_meal_entries_user_date on meal_entries (user_id, entry_date);
+create index if not exists idx_workout_entries_user_date on workout_entries (user_id, entry_date);
 
 -- ---------------------------------------------------------
--- Row Level Security
--- โปรเจกต์นี้ไม่มีระบบ login (ใช้คนเดียว) จึงเปิดให้ anon key
--- อ่าน/เขียนได้ทั้งหมด เพื่อความง่าย
--- ⚠️ ข้อควรระวัง: ใครก็ตามที่มีลิงก์เว็บไซต์ของคุณจะเห็น/แก้ข้อมูลได้
--- ถ้าต้องการความเป็นส่วนตัวมากขึ้น ดูหัวข้อ "ความปลอดภัย" ใน README
+-- Row Level Security: ทุกคนเห็น/แก้ได้เฉพาะข้อมูลของตัวเองเท่านั้น
 -- ---------------------------------------------------------
 alter table profiles enable row level security;
 alter table meal_entries enable row level security;
 alter table workout_entries enable row level security;
 
-drop policy if exists "public_all_profiles" on profiles;
-create policy "public_all_profiles" on profiles
-  for all using (true) with check (true);
+drop policy if exists "own_profile" on profiles;
+create policy "own_profile" on profiles
+  for all using (auth.uid() = id) with check (auth.uid() = id);
 
-drop policy if exists "public_all_meal_entries" on meal_entries;
-create policy "public_all_meal_entries" on meal_entries
-  for all using (true) with check (true);
+drop policy if exists "own_meal_entries" on meal_entries;
+create policy "own_meal_entries" on meal_entries
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
-drop policy if exists "public_all_workout_entries" on workout_entries;
-create policy "public_all_workout_entries" on workout_entries
-  for all using (true) with check (true);
-
--- สร้างแถวโปรไฟล์เริ่มต้นไว้ 1 แถว (จะได้มีให้แก้ไขทันที)
-insert into profiles (full_name)
-select 'ของฉัน'
-where not exists (select 1 from profiles);
+drop policy if exists "own_workout_entries" on workout_entries;
+create policy "own_workout_entries" on workout_entries
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
