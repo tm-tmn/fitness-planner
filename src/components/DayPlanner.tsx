@@ -3,6 +3,13 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useActivity } from "@/lib/useActivity";
+import {
+  REGION_LABELS,
+  REGION_ORDER,
+  Region,
+  detectRegion,
+  suggestMenus,
+} from "@/lib/regionalMenus";
 import LocationPrompt from "@/components/LocationPrompt";
 import { Coords, mapsSearchUrl, searchTerms } from "@/lib/shopSearch";
 import RestTimer, { TimerStart } from "@/components/RestTimer";
@@ -54,6 +61,13 @@ export default function DayPlanner({ date }: { date: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [coords, setCoords] = useState<Coords | null>(null);
+  const [regionOverride, setRegionOverride] = useState<Region | null>(null);
+  const [undo, setUndo] = useState<
+    { id: string; food_name: string; calories: number | null }[][]
+  >([]);
+  const region: Region | null = coords
+    ? regionOverride ?? detectRegion(coords.lat, coords.lng)
+    : null;
   const [timerStart, setTimerStart] = useState<TimerStart | null>(null);
   const [hotelOpen, setHotelOpen] = useState(false);
   const [hotelBusy, setHotelBusy] = useState(false);
@@ -135,6 +149,74 @@ export default function DayPlanner({ date }: { date: string }) {
     setHotelOpen(false);
     setHotelBusy(false);
     load();
+  }
+
+  /** สลับเมนูของมื้อที่ยังไม่ติ๊ก เก็บค่าเดิมไว้ให้ย้อนกลับได้ในหน้านี้ */
+  async function swapMeals(
+    changes: { id: string; food_name: string; calories: number }[]
+  ) {
+    const before = changes
+      .map((c) => meals.find((m) => m.id === c.id))
+      .filter((m): m is MealEntry => !!m)
+      .map((m) => ({ id: m.id, food_name: m.food_name, calories: m.calories ?? null }));
+    setMeals((prev) =>
+      prev.map((m) => {
+        const c = changes.find((x) => x.id === m.id);
+        return c ? { ...m, food_name: c.food_name, calories: c.calories } : m;
+      })
+    );
+    setUndo((u) => [...u, before]);
+    for (const c of changes) {
+      const { error } = await supabase
+        .from("meal_entries")
+        .update({ food_name: c.food_name, calories: c.calories })
+        .eq("id", c.id);
+      if (error) {
+        setError(error.message);
+        load();
+        return;
+      }
+    }
+  }
+
+  async function undoSwap() {
+    const last = undo[undo.length - 1];
+    if (!last) return;
+    setUndo((u) => u.slice(0, -1));
+    setMeals((prev) =>
+      prev.map((m) => {
+        const o = last.find((x) => x.id === m.id);
+        return o ? { ...m, food_name: o.food_name, calories: o.calories } : m;
+      })
+    );
+    for (const o of last) {
+      const { error } = await supabase
+        .from("meal_entries")
+        .update({ food_name: o.food_name, calories: o.calories })
+        .eq("id", o.id);
+      if (error) {
+        setError(error.message);
+        load();
+        return;
+      }
+    }
+  }
+
+  function swapWholeDay() {
+    if (!region) return;
+    const used = new Set<string>();
+    const changes: { id: string; food_name: string; calories: number }[] = [];
+    meals
+      .filter((m) => !m.is_done)
+      .forEach((m, i) => {
+        const options = suggestMenus(region, m.meal_type, m.calories ?? null, m.food_name, 6, 0);
+        const pick = options.find((o) => !used.has(o.name)) ?? options[i % Math.max(options.length, 1)];
+        if (pick) {
+          used.add(pick.name);
+          changes.push({ id: m.id, food_name: pick.name, calories: pick.kcal });
+        }
+      });
+    if (changes.length) swapMeals(changes);
   }
 
   async function toggleMeal(id: string, is_done: boolean) {
@@ -253,6 +335,39 @@ export default function DayPlanner({ date }: { date: string }) {
 
       <LocationPrompt coords={coords} onChange={setCoords} />
 
+      {region && (
+        <div className="card flex flex-wrap items-center gap-2 bg-[#E6F6FF] px-4 py-3 text-sm">
+          <label className="flex flex-wrap items-center gap-2">
+            <span className="font-display">เมนูแนะนำตามพื้นที่:</span>
+            <select
+              className="input w-auto"
+              value={region}
+              onChange={(e) => setRegionOverride(e.target.value as Region)}
+              aria-label="เลือกพื้นที่สำหรับเมนูแนะนำ"
+            >
+              {REGION_ORDER.map((r) => (
+                <option key={r} value={r}>
+                  {REGION_LABELS[r]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button onClick={swapWholeDay} className="btn btn-mint btn-sm">
+            สลับทั้งวันเป็นเมนูแถวนี้
+          </button>
+          {undo.length > 0 && (
+            <button onClick={undoSwap} className="btn btn-ghost btn-sm">
+              ย้อนกลับการสลับล่าสุด
+            </button>
+          )}
+          <p className="w-full text-xs opacity-80">
+            ตรวจพื้นที่จากตำแหน่งแบบประมาณ เปลี่ยนเองได้ ตัวเลขแคลอรี่เป็นค่าประมาณทั่วไป
+            สลับเฉพาะมื้อที่ยังไม่ติ๊ก และย้อนกลับได้เฉพาะตอนอยู่ในหน้านี้
+            ถ้าอยากกลับไปเป็นเมนูของโค้ชหลังรีเฟรช ให้ใส่โปรแกรมใหม่ที่หน้าโปรแกรม
+          </p>
+        </div>
+      )}
+
       <div className="grid items-start gap-6 lg:grid-cols-2">
       {/* ---------- อาหาร ---------- */}
       <section className="space-y-4">
@@ -266,6 +381,8 @@ export default function DayPlanner({ date }: { date: string }) {
             entries={meals.filter((m) => m.meal_type === mt)}
             onAdd={(name) => addMeal(mt, name)}
             coords={coords}
+            region={region}
+            onSwap={(id, name, kcal) => swapMeals([{ id, food_name: name, calories: kcal }])}
             onToggle={toggleMeal}
             onDelete={deleteMeal}
           />
@@ -409,12 +526,16 @@ function MealSection({
   entries,
   onAdd,
   coords,
+  region,
+  onSwap,
   onToggle,
   onDelete,
 }: {
   mealType: MealType;
   entries: MealEntry[];
   coords: Coords | null;
+  region: Region | null;
+  onSwap: (id: string, name: string, kcal: number) => void;
   onAdd: (name: string) => void;
   onToggle: (id: string, done: boolean) => void;
   onDelete: (id: string) => void;
@@ -455,6 +576,14 @@ function MealSection({
                 <TrashIcon size={20} />
               </button>
               </div>
+              {region && !m.is_done && (
+                <SwapOptions
+                  meal={m}
+                  mealType={mealType}
+                  region={region}
+                  onSwap={onSwap}
+                />
+              )}
               {coords && !m.is_done && (
                 <ShopLinks foodName={m.food_name} coords={coords} />
               )}
@@ -466,6 +595,60 @@ function MealSection({
         </ul>
         <AddRow placeholder="เพิ่มเมนูอาหาร" onAdd={onAdd} />
       </div>
+    </div>
+  );
+}
+
+function SwapOptions({
+  meal,
+  mealType,
+  region,
+  onSwap,
+}: {
+  meal: MealEntry;
+  mealType: MealType;
+  region: Region;
+  onSwap: (id: string, name: string, kcal: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [page, setPage] = useState(0);
+  const options = suggestMenus(region, mealType, meal.calories ?? null, meal.food_name, 4, page);
+  return (
+    <div className="pl-10">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="text-sm font-semibold underline decoration-wavy underline-offset-4"
+      >
+        {open ? "ซ่อนเมนูแนะนำ" : "เมนูแนะนำแถวนี้"}
+      </button>
+      {open && (
+        <div className="mt-2 space-y-2">
+          <ul className="space-y-2">
+            {options.map((o) => (
+              <li key={o.name}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSwap(meal.id, o.name, o.kcal);
+                    setOpen(false);
+                  }}
+                  className="btn btn-ghost w-full !flex-col !items-start !gap-0 !rounded-2xl !whitespace-normal text-left text-sm sm:!flex-row sm:!items-center sm:!justify-between sm:!gap-3"
+                >
+                  <span>{o.name}</span>
+                  <span className="shrink-0 text-xs opacity-70">
+                    ~{o.kcal} kcal · โปรตีน ~{o.protein} ก.
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          <button type="button" onClick={() => setPage((p) => p + 1)} className="btn btn-sm">
+            ดูตัวเลือกอื่น
+          </button>
+        </div>
+      )}
     </div>
   );
 }
