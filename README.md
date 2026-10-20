@@ -4,6 +4,8 @@
 
 สร้างด้วย **Next.js 14 (App Router) + TypeScript + Tailwind CSS** ฝั่งหน้าบ้าน และ **Supabase** (Postgres + Auth) เป็นฐานข้อมูล/ระบบล็อกอิน
 
+พัฒนาโดย **Teerawat Maneewat**
+
 ---
 
 ## โครงสร้างหน้าเว็บ

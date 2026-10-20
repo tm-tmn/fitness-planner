@@ -7,6 +7,8 @@ export const metadata: Metadata = {
   title: "Fit & Meal Planner",
   description: "ตารางออกกำลังกายและอาหารการกินส่วนตัว",
   applicationName: "Fit & Meal",
+  authors: [{ name: "Teerawat Maneewat" }],
+  creator: "Teerawat Maneewat",
   icons: {
     icon: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
     apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
@@ -45,6 +47,9 @@ export default function RootLayout({
         <main className="mx-auto max-w-5xl px-4 pb-28 pt-6 md:px-6 md:pb-10">
           <PwaSetup />
           {children}
+          <footer className="mt-10 text-center text-sm opacity-80">
+            พัฒนาโดย Teerawat Maneewat
+          </footer>
         </main>
       </body>
     </html>
