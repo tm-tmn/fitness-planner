@@ -48,7 +48,7 @@ export default function RootLayout({
           <PwaSetup />
           {children}
           <footer className="mt-10 text-center text-sm opacity-80">
-            พัฒนาโดย Teerawat Maneewat
+            พัฒนาโดย หุ่นหมี อยากผอมมม
           </footer>
         </main>
       </body>
