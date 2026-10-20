@@ -60,6 +60,7 @@ export default function DayPlanner({ date }: { date: string }) {
   const [workouts, setWorkouts] = useState<WorkoutEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [kcalTarget, setKcalTarget] = useState<number | null | undefined>(undefined);
   const [coords, setCoords] = useState<Coords | null>(null);
   const [regionOverride, setRegionOverride] = useState<Region | null>(null);
   const [undo, setUndo] = useState<
@@ -101,11 +102,21 @@ export default function DayPlanner({ date }: { date: string }) {
     load();
   }, [load]);
 
-  async function addMeal(meal_type: MealType, food_name: string) {
+  useEffect(() => {
+    supabase
+      .from("profiles")
+      .select("daily_calorie_target")
+      .maybeSingle()
+      .then(({ data }) =>
+        setKcalTarget((data as { daily_calorie_target: number | null } | null)?.daily_calorie_target ?? null)
+      );
+  }, [supabase]);
+
+  async function addMeal(meal_type: MealType, food_name: string, calories?: number | null) {
     if (!food_name.trim()) return;
     const { error } = await supabase
       .from("meal_entries")
-      .insert({ entry_date: date, meal_type, food_name });
+      .insert({ entry_date: date, meal_type, food_name, calories: calories ?? null });
     if (error) setError(error.message);
     else load();
   }
@@ -327,6 +338,13 @@ export default function DayPlanner({ date }: { date: string }) {
         </div>
       </div>
 
+      <CalorieSummary
+        target={kcalTarget}
+        planned={kcalPlanned}
+        eaten={kcalDone}
+        missing={meals.filter((m) => !m.calories).length}
+      />
+
       {error && (
         <div className="card bg-candy px-4 py-2 text-sm">
           เกิดข้อผิดพลาด: {error}
@@ -379,7 +397,7 @@ export default function DayPlanner({ date }: { date: string }) {
             key={mt}
             mealType={mt}
             entries={meals.filter((m) => m.meal_type === mt)}
-            onAdd={(name) => addMeal(mt, name)}
+            onAdd={(name, kcal) => addMeal(mt, name, kcal)}
             coords={coords}
             region={region}
             onSwap={(id, name, kcal) => swapMeals([{ id, food_name: name, calories: kcal }])}
@@ -536,7 +554,7 @@ function MealSection({
   coords: Coords | null;
   region: Region | null;
   onSwap: (id: string, name: string, kcal: number) => void;
-  onAdd: (name: string) => void;
+  onAdd: (name: string, kcal?: number | null) => void;
   onToggle: (id: string, done: boolean) => void;
   onDelete: (id: string) => void;
 }) {
@@ -546,6 +564,11 @@ function MealSection({
       <h3 className={`flex items-center gap-2 border-b-[3px] border-ink px-3 py-1.5 ${MEAL_TINT[mealType]}`}>
         <Icon size={28} />
         {MEAL_TYPE_LABELS[mealType]}
+        {entries.some((e) => e.calories) && (
+          <span className="ml-auto text-sm opacity-80">
+            รวม {entries.reduce((a, e) => a + (e.calories ?? 0), 0).toLocaleString()} kcal
+          </span>
+        )}
       </h3>
       <div className="p-3">
         <ul className="mb-3 space-y-2">
@@ -593,7 +616,7 @@ function MealSection({
             <li className="text-sm opacity-60">ยังไม่มีรายการ</li>
           )}
         </ul>
-        <AddRow placeholder="เพิ่มเมนูอาหาร" onAdd={onAdd} />
+        <AddRow placeholder="เพิ่มเมนูอาหาร" onAdd={onAdd} withKcal />
       </div>
     </div>
   );
@@ -653,6 +676,121 @@ function SwapOptions({
   );
 }
 
+function CalorieSummary({
+  target,
+  planned,
+  eaten,
+  missing,
+}: {
+  target: number | null | undefined;
+  planned: number;
+  eaten: number;
+  missing: number;
+}) {
+  if (planned === 0 && !target && missing === 0) return null;
+  const scale = Math.max(target ?? 0, planned, eaten, 1);
+  const eatenPct = Math.min(100, (eaten / scale) * 100);
+  const plannedPct = Math.min(100, (planned / scale) * 100);
+  const targetPct = target ? Math.min(100, (target / scale) * 100) : null;
+  const left = target ? target - eaten : null;
+  const planDiff = target ? planned - target : null;
+  return (
+    <section className="card space-y-3 p-4" aria-label="สรุปแคลอรี่วันนี้">
+      <h2 className="flex items-center gap-2 text-lg">
+        <FlameIcon size={28} /> สรุปแคลอรี่วันนี้
+      </h2>
+      <dl className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+        <div className="rounded-xl border-[3px] border-ink bg-[#E6F6FF] p-2">
+          <dt className="text-xs">เป้าต่อวัน</dt>
+          <dd className="font-display text-lg">
+            {target ? `${target.toLocaleString()}` : "—"}
+            <span className="text-xs"> kcal</span>
+          </dd>
+        </div>
+        <div className="rounded-xl border-[3px] border-ink bg-[#FFF3C4] p-2">
+          <dt className="text-xs">แผนวันนี้รวม</dt>
+          <dd className="font-display text-lg">
+            {planned.toLocaleString()}
+            <span className="text-xs"> kcal</span>
+          </dd>
+        </div>
+        <div className="rounded-xl border-[3px] border-ink bg-mint-soft p-2">
+          <dt className="text-xs">กินแล้ว (ที่ติ๊ก)</dt>
+          <dd className="font-display text-lg">
+            {eaten.toLocaleString()}
+            <span className="text-xs"> kcal</span>
+          </dd>
+        </div>
+        <div
+          className={`rounded-xl border-[3px] border-ink p-2 ${
+            left !== null && left < 0 ? "bg-candy" : "bg-white"
+          }`}
+        >
+          <dt className="text-xs">{left !== null && left < 0 ? "เกินเป้า" : "เหลือกินได้"}</dt>
+          <dd className="font-display text-lg">
+            {left === null ? "—" : Math.abs(left).toLocaleString()}
+            <span className="text-xs"> kcal</span>
+          </dd>
+        </div>
+      </dl>
+
+      <div
+        className="relative h-6 rounded-full border-[3px] border-ink bg-white"
+        role="img"
+        aria-label={`กินแล้ว ${eaten} จากแผน ${planned}${target ? ` เป้า ${target}` : ""} กิโลแคลอรี่`}
+      >
+        <div
+          className="absolute inset-y-0 left-0 rounded-l-full bg-sun/70"
+          style={{ width: `${plannedPct}%` }}
+        />
+        <div
+          className="absolute inset-y-0 left-0 rounded-l-full bg-mint"
+          style={{ width: `${eatenPct}%` }}
+        />
+        {targetPct !== null && (
+          <div
+            className="absolute -top-1 -bottom-1 w-[3px] bg-ink"
+            style={{ left: `calc(${targetPct}% - 1.5px)` }}
+            title="เป้า"
+          />
+        )}
+      </div>
+      <p className="flex flex-wrap gap-x-4 text-xs">
+        <span>
+          <span className="inline-block h-2.5 w-2.5 rounded-full border-2 border-ink bg-mint" /> กินแล้ว
+        </span>
+        <span>
+          <span className="inline-block h-2.5 w-2.5 rounded-full border-2 border-ink bg-sun" /> แผนทั้งวัน
+        </span>
+        {targetPct !== null && <span>| เส้นดำ = เป้า</span>}
+      </p>
+
+      {planDiff !== null && (
+        <p className="text-sm">
+          {Math.abs(planDiff) <= 100
+            ? "แผนของวันนี้ใกล้เคียงเป้าแล้ว"
+            : planDiff > 0
+            ? `แผนของวันนี้สูงกว่าเป้า ~${planDiff.toLocaleString()} kcal ถ้ากินครบทุกอย่าง`
+            : `แผนของวันนี้ต่ำกว่าเป้า ~${Math.abs(planDiff).toLocaleString()} kcal เพิ่มของว่างได้ถ้ายังหิว`}
+        </p>
+      )}
+      {!target && target !== undefined && (
+        <p className="text-sm">
+          ยังไม่ได้ตั้งเป้าแคลอรี่ ไปตั้งที่หน้าโปรไฟล์เพื่อเทียบกับแผน
+        </p>
+      )}
+      {missing > 0 && (
+        <p className="text-sm">
+          มี {missing} รายการที่ไม่ได้ใส่แคลอรี่ จึงไม่ถูกนับรวม (ใส่ตัวเลข kcal ตอนเพิ่มเมนูได้)
+        </p>
+      )}
+      <p className="text-xs opacity-70">
+        &quot;กินแล้ว&quot; นับจากมื้อที่คุณติ๊ก ตัวเลขแคลอรี่ของเมนูเป็นค่าประมาณ
+      </p>
+    </section>
+  );
+}
+
 function ShopLinks({ foodName, coords }: { foodName: string; coords: Coords }) {
   const [open, setOpen] = useState(false);
   const terms = searchTerms(foodName);
@@ -690,15 +828,19 @@ function ShopLinks({ foodName, coords }: { foodName: string; coords: Coords }) {
 function AddRow({
   placeholder,
   onAdd,
+  withKcal,
 }: {
   placeholder: string;
-  onAdd: (value: string) => void;
+  onAdd: (value: string, kcal?: number | null) => void;
+  withKcal?: boolean;
 }) {
   const [value, setValue] = useState("");
+  const [kcal, setKcal] = useState("");
 
   function submit() {
-    onAdd(value);
+    onAdd(value, kcal ? Number(kcal) : null);
     setValue("");
+    setKcal("");
   }
 
   return (
@@ -713,6 +855,22 @@ function AddRow({
         aria-label={placeholder}
         className="input"
       />
+      {withKcal && (
+        <input
+          type="number"
+          inputMode="numeric"
+          min={0}
+          max={5000}
+          value={kcal}
+          onChange={(e) => setKcal(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") submit();
+          }}
+          placeholder="kcal"
+          aria-label="แคลอรี่ (ไม่บังคับ)"
+          className="input !w-24 shrink-0"
+        />
+      )}
       <button onClick={submit} className="btn btn-mint shrink-0">
         <PlusIcon size={16} />
         เพิ่ม

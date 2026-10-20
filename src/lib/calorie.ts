@@ -40,7 +40,13 @@ export interface CalorieInput {
 
 export interface CalorieResult {
   bmr: number;
+  multiplier: number;
   tdee: number;
+  /** ค่าแคลอรี่ที่ถูกตัดจาก TDEE ต่อวัน (หลังคิดค่าต่ำสุดแล้ว) */
+  deficit: number;
+  /** แปลงเป็นน้ำหนักไขมันที่ลดได้โดยประมาณต่อสัปดาห์ (7,700 kcal ≈ 1 กก.) */
+  weeklyLossKg: number;
+  floorApplied: boolean;
   calorieTarget: number;
   proteinTargetG: number;
 }
@@ -56,17 +62,26 @@ export function calculateTargets(input: CalorieInput): CalorieResult {
 
   // พร่องแคลอรี่ ~15% เพื่อลดไขมันแบบค่อยเป็นค่อยไป (recomposition-friendly)
   let calorieTarget = Math.round(tdee * 0.85);
+  let floorApplied = false;
 
   // กันไม่ให้ต่ำเกินไปจนเป็นอันตราย (ค่าต่ำสุดทั่วไปที่แนะนำ)
   const floor = gender === "male" ? 1500 : 1200;
-  if (calorieTarget < floor) calorieTarget = floor;
+  if (calorieTarget < floor) {
+    calorieTarget = floor;
+    floorApplied = true;
+  }
 
   // โปรตีนสูงหน่อยเพื่อรักษากล้ามเนื้อระหว่างพร่องแคลอรี่ (1.8 ก./กก.)
   const proteinTargetG = Math.round(weightKg * 1.8);
 
   return {
     bmr: Math.round(bmr),
+    multiplier: ACTIVITY_MULTIPLIER[activityLevel],
     tdee: Math.round(tdee),
+    deficit: Math.max(0, Math.round(tdee) - calorieTarget),
+    weeklyLossKg:
+      Math.round((Math.max(0, tdee - calorieTarget) * 7 / 7700) * 100) / 100,
+    floorApplied,
     calorieTarget,
     proteinTargetG,
   };

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { format, parseISO } from "date-fns";
+import { addDays, format, parseISO } from "date-fns";
 import { th } from "date-fns/locale";
 import { createClient } from "@/lib/supabase/client";
 import { Profile } from "@/lib/types";
@@ -36,6 +36,8 @@ export default function ProgressPage() {
   const [weight, setWeight] = useState("");
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [range, setRange] = useState<7 | 14>(7);
+  const [kcalDays, setKcalDays] = useState<{ date: string; planned: number; eaten: number }[]>([]);
 
   const load = useCallback(async () => {
     const [w, p] = await Promise.all([
@@ -59,6 +61,31 @@ export default function ProgressPage() {
     setProfile((p.data as Profile) ?? null);
     setLoading(false);
   }, [supabase]);
+
+  useEffect(() => {
+    (async () => {
+      const today = new Date();
+      const from = format(addDays(today, -(range - 1)), "yyyy-MM-dd");
+      const to = format(today, "yyyy-MM-dd");
+      const { data } = await supabase
+        .from("meal_entries")
+        .select("entry_date,calories,is_done")
+        .gte("entry_date", from)
+        .lte("entry_date", to)
+        .range(0, 9999);
+      const map = new Map<string, { planned: number; eaten: number }>();
+      for (let i = range - 1; i >= 0; i--) {
+        map.set(format(addDays(today, -i), "yyyy-MM-dd"), { planned: 0, eaten: 0 });
+      }
+      (data ?? []).forEach((r: { entry_date: string; calories: number | null; is_done: boolean }) => {
+        const d = map.get(r.entry_date);
+        if (!d) return;
+        d.planned += r.calories ?? 0;
+        if (r.is_done) d.eaten += r.calories ?? 0;
+      });
+      setKcalDays([...map.entries()].map(([date, v]) => ({ date, ...v })));
+    })();
+  }, [supabase, range]);
 
   useEffect(() => {
     load();
@@ -266,6 +293,28 @@ export default function ProgressPage() {
         )}
       </section>
 
+      {/* ---------- แคลอรี่ย้อนหลัง ---------- */}
+      <section className="card space-y-3 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="flex items-center gap-2 text-lg">
+            <FlameIcon size={30} /> แคลอรี่ย้อนหลัง
+          </h2>
+          <div className="flex gap-1" role="group" aria-label="ช่วงเวลา">
+            {([7, 14] as const).map((n) => (
+              <button
+                key={n}
+                onClick={() => setRange(n)}
+                aria-pressed={range === n}
+                className={`btn btn-sm ${range === n ? "" : "btn-ghost"}`}
+              >
+                {n} วัน
+              </button>
+            ))}
+          </div>
+        </div>
+        <KcalChart days={kcalDays} target={profile?.daily_calorie_target ?? null} />
+      </section>
+
       {/* ---------- ป้ายรางวัล ---------- */}
       <section className="card space-y-3 p-4">
         <h2 className="flex items-center gap-2 text-lg">
@@ -295,6 +344,77 @@ export default function ProgressPage() {
         )}
       </section>
     </div>
+  );
+}
+
+function KcalChart({
+  days,
+  target,
+}: {
+  days: { date: string; planned: number; eaten: number }[];
+  target: number | null;
+}) {
+  const withEaten = days.filter((d) => d.eaten > 0);
+  const avgEaten = withEaten.length
+    ? Math.round(withEaten.reduce((a, d) => a + d.eaten, 0) / withEaten.length)
+    : null;
+  const max = Math.max(target ?? 0, ...days.map((d) => Math.max(d.planned, d.eaten)), 500);
+  const W = 420;
+  const H = 200;
+  const pad = { l: 8, r: 8, t: 14, b: 26 };
+  const bw = (W - pad.l - pad.r) / Math.max(days.length, 1);
+  const y = (v: number) => pad.t + (1 - v / max) * (H - pad.t - pad.b);
+  const noData = days.every((d) => d.planned === 0);
+  return (
+    <>
+      {noData ? (
+        <p className="text-sm opacity-70">
+          ยังไม่มีข้อมูลแคลอรี่ในช่วงนี้ ใส่โปรแกรมที่หน้าโปรแกรม หรือเพิ่มเมนูพร้อมตัวเลข kcal
+        </p>
+      ) : (
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          className="w-full rounded-2xl border-[3px] border-ink bg-[#F4FBFF]"
+          role="img"
+          aria-label="แท่งแคลอรี่ตามแผนและที่กินแล้วในแต่ละวัน"
+        >
+          {days.map((d, i) => {
+            const x = pad.l + i * bw + bw * 0.15;
+            const w = bw * 0.7;
+            return (
+              <g key={d.date}>
+                <rect x={x} y={y(d.planned)} width={w} height={H - pad.b - y(d.planned)} rx="4" fill="#FFD23F" stroke="#26234A" strokeWidth="2" />
+                {d.eaten > 0 && (
+                  <rect x={x + w * 0.2} y={y(d.eaten)} width={w * 0.6} height={H - pad.b - y(d.eaten)} rx="3" fill="#5ED6A8" stroke="#26234A" strokeWidth="2" />
+                )}
+                <text x={x + w / 2} y={H - 8} textAnchor="middle" fontSize={days.length > 7 ? 10 : 12} fill="#26234A">
+                  {format(parseISO(d.date), "d")}
+                </text>
+              </g>
+            );
+          })}
+          {target && (
+            <g>
+              <line x1={pad.l} x2={W - pad.r} y1={y(target)} y2={y(target)} stroke="#FF6F91" strokeWidth="3" strokeDasharray="7 5" />
+              <text x={W - pad.r} y={y(target) - 4} textAnchor="end" fontSize="12" fill="#26234A">
+                เป้า {target}
+              </text>
+            </g>
+          )}
+        </svg>
+      )}
+      <p className="flex flex-wrap gap-x-4 text-xs">
+        <span><span className="inline-block h-2.5 w-2.5 rounded-full border-2 border-ink bg-sun" /> แผนของวัน</span>
+        <span><span className="inline-block h-2.5 w-2.5 rounded-full border-2 border-ink bg-mint" /> กินแล้ว (ที่ติ๊ก)</span>
+        {target && <span>เส้นประชมพู = เป้า</span>}
+      </p>
+      {avgEaten !== null && (
+        <p className="text-sm">
+          เฉลี่ยวันที่ติ๊กกิน: <b>{avgEaten.toLocaleString()} kcal/วัน</b>
+          {target ? ` (เป้า ${target.toLocaleString()}, ต่าง ${avgEaten - target > 0 ? "+" : ""}${(avgEaten - target).toLocaleString()})` : ""}
+        </p>
+      )}
+    </>
   );
 }
 

@@ -71,6 +71,16 @@ export default function ProfilePage() {
     update("daily_protein_target_g", result.proteinTargetG);
   }
 
+  const explained = canCalculate
+    ? calculateTargets({
+        gender: profile!.gender as Gender,
+        age: profile!.age as number,
+        weightKg: profile!.weight_kg as number,
+        heightCm: profile!.height_cm as number,
+        activityLevel: profile!.activity_level as ActivityLevel,
+      })
+    : null;
+
   async function save() {
     if (!profile) return;
     setSaving(true);
@@ -267,6 +277,60 @@ export default function ProfilePage() {
           </Field>
         </div>
       </div>
+
+      {explained && profile && (
+        <details className="rounded-2xl border-[3px] border-ink bg-white p-3 text-sm" open>
+          <summary className="cursor-pointer font-display">
+            ตัวเลขนี้มาจากไหน (วิธีคำนวณ)
+          </summary>
+          <ol className="mt-2 list-decimal space-y-1 pl-5">
+            <li>
+              พลังงานที่ร่างกายใช้ตอนพัก (BMR) = <b>{explained.bmr.toLocaleString()} kcal</b>
+              <span className="block text-xs opacity-70">
+                สูตร Mifflin-St Jeor จากเพศ อายุ น้ำหนัก ส่วนสูง
+              </span>
+            </li>
+            <li>
+              พลังงานที่ใช้จริงทั้งวัน (TDEE) = BMR × {explained.multiplier} ={" "}
+              <b>{explained.tdee.toLocaleString()} kcal</b>
+              <span className="block text-xs opacity-70">
+                ตัวคูณมาจากระดับกิจกรรมที่เลือก
+              </span>
+            </li>
+            <li>
+              เป้ากินต่อวัน = TDEE ลด 15% ={" "}
+              <b>{explained.calorieTarget.toLocaleString()} kcal</b>
+              {explained.floorApplied && (
+                <span className="block text-xs">
+                  ถึงขั้นต่ำที่ปลอดภัย ({profile.gender === "male" ? "1,500" : "1,200"} kcal) จึงใช้ค่านี้แทน
+                </span>
+              )}
+              <span className="block text-xs opacity-70">
+                ขาดดุล ~{explained.deficit.toLocaleString()} kcal/วัน → ไขมันลดได้ประมาณ{" "}
+                {explained.weeklyLossKg} กก./สัปดาห์ (ค่าประมาณจาก 7,700 kcal ≈ 1 กก.)
+              </span>
+            </li>
+            <li>
+              โปรตีนต่อวัน = น้ำหนัก × 1.8 ก. ={" "}
+              <b>{explained.proteinTargetG} ก.</b>
+              <span className="block text-xs opacity-70">
+                ช่วยรักษากล้ามเนื้อระหว่างลดไขมัน
+              </span>
+            </li>
+          </ol>
+          {profile.daily_calorie_target !== null &&
+            profile.daily_calorie_target !== explained.calorieTarget && (
+              <p className="mt-2 rounded-xl border-2 border-ink bg-[#FFF3C4] p-2">
+                ค่าที่บันทึกไว้ตอนนี้คือ {profile.daily_calorie_target} kcal ซึ่งต่างจากที่สูตรคำนวณได้ในตอนนี้
+                กด &quot;คำนวณให้อัตโนมัติ&quot; แล้วบันทึกถ้าต้องการใช้ค่าใหม่
+              </p>
+            )}
+          <p className="mt-2 text-xs opacity-70">
+            เป็นค่าประมาณทั่วไปสำหรับผู้ใหญ่สุขภาพปกติ ไม่ใช่คำแนะนำทางการแพทย์
+            ถ้ามีโรคประจำตัวหรือตั้งครรภ์ ควรปรึกษาแพทย์/นักโภชนาการ
+          </p>
+        </details>
+      )}
 
       <Field label="บันทึกเพิ่มเติม">
         <textarea
