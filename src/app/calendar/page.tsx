@@ -70,7 +70,7 @@ export default function CalendarPage() {
   }, [load]);
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-3xl space-y-4">
       <div className="card flex items-center justify-between p-2">
         <button
           onClick={() => setMonthDate((d) => subMonths(d, 1))}

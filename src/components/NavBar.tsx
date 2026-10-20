@@ -52,14 +52,14 @@ export default function NavBar() {
   return (
     <>
       <header className="sticky top-0 z-10 border-b-[3px] border-ink bg-sun">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-2 px-4 py-2">
-          <Link href="/" className="flex items-center gap-2 font-display text-lg">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-2 md:px-6">
+          <Link href="/" className="flex shrink-0 items-center gap-2 whitespace-nowrap font-display text-lg">
             <Buddy size={40} />
             <span>Fit &amp; Meal</span>
           </Link>
 
           {/* เมนูบนจอกว้าง */}
-          <nav className="hidden items-center gap-1 md:flex" aria-label="เมนูหลัก">
+          <nav className="hidden flex-1 items-center justify-center gap-1 md:flex" aria-label="เมนูหลัก">
             {links.map(({ href, label, Icon }) => (
               <Link
                 key={href}
@@ -74,7 +74,7 @@ export default function NavBar() {
           </nav>
 
           {email && (
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-2">
               <span className="hidden max-w-[10rem] truncate text-xs lg:inline">
                 {email}
               </span>
@@ -91,7 +91,7 @@ export default function NavBar() {
       {/* แท็บล่างบนมือถือ */}
       <nav
         aria-label="เมนูหลัก"
-        className="fixed inset-x-0 bottom-0 z-10 border-t-[3px] border-ink bg-sun md:hidden"
+        className="fixed inset-x-0 bottom-0 z-10 border-t-[3px] border-ink bg-sun pb-[env(safe-area-inset-bottom)] md:hidden"
       >
         <ul className="mx-auto grid max-w-md grid-cols-4 gap-1 px-2 py-1.5">
           {links.map(({ href, label, Icon }) => (

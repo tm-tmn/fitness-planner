@@ -1,10 +1,17 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import NavBar from "@/components/NavBar";
 
 export const metadata: Metadata = {
   title: "Fit & Meal Planner",
   description: "ตารางออกกำลังกายและอาหารการกินส่วนตัว",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#FFD23F",
 };
 
 export default function RootLayout({
@@ -28,7 +35,7 @@ export default function RootLayout({
       </head>
       <body>
         <NavBar />
-        <main className="mx-auto max-w-3xl px-4 pb-28 pt-6 md:pb-10">
+        <main className="mx-auto max-w-5xl px-4 pb-28 pt-6 md:px-6 md:pb-10">
           {children}
         </main>
       </body>

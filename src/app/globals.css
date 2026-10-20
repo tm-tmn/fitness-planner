@@ -57,6 +57,7 @@ h3 {
     padding: 0.4rem 1.1rem;
     font-family: Mitr, Mali, sans-serif;
     font-weight: 500;
+    white-space: nowrap;
     color: var(--ink);
     background: var(--sun);
     box-shadow: 3px 3px 0 var(--ink);
@@ -189,6 +190,7 @@ h3 {
     border-radius: 999px;
     padding: 0.2rem 0.8rem 0.2rem 0.4rem;
     font-family: Mitr, Mali, sans-serif;
+    white-space: nowrap;
     transition: background 0.1s;
   }
   .tab:hover {
@@ -222,6 +224,29 @@ h3 {
 :focus-visible {
   outline: 3px dashed var(--ink);
   outline-offset: 3px;
+}
+
+/* จอสัมผัส (มือถือ/แท็บเล็ต): ขยายพื้นที่กดให้ได้อย่างน้อย ~44px */
+@media (pointer: coarse) {
+  .cartoon-check {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+  .cartoon-check::before {
+    width: 1.25rem;
+    height: 0.7rem;
+  }
+  .icon-btn {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+  .btn-sm {
+    min-height: 2.5rem;
+  }
+  .input {
+    min-height: 2.75rem;
+    font-size: 16px; /* กัน iOS ซูมเข้าเองตอนแตะช่องกรอก */
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

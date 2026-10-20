@@ -118,7 +118,7 @@ export default function ProfilePage() {
   if (loading || !profile) return <p>กำลังโหลด...</p>;
 
   return (
-    <div className="card max-w-md space-y-5 p-5">
+    <div className="card mx-auto max-w-md space-y-5 p-5">
       <div className="flex items-center gap-3">
         <Buddy size={64} />
         <h1 className="text-xl">โปรไฟล์ของฉัน</h1>

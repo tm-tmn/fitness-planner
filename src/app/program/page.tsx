@@ -80,7 +80,7 @@ export default function ProgramPage() {
   const proteinTarget = profile?.daily_protein_target_g;
 
   return (
-    <div className="max-w-xl space-y-6">
+    <div className="mx-auto max-w-3xl space-y-6">
       <div className="card flex items-center gap-4 p-4">
         <Buddy size={80} />
         <div>

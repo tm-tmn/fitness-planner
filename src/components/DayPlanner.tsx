@@ -184,6 +184,7 @@ export default function DayPlanner({ date }: { date: string }) {
         </div>
       )}
 
+      <div className="grid items-start gap-6 lg:grid-cols-2">
       {/* ---------- อาหาร ---------- */}
       <section className="space-y-4">
         <h2 className="flex items-center gap-2 text-lg">
@@ -202,7 +203,7 @@ export default function DayPlanner({ date }: { date: string }) {
       </section>
 
       {/* ---------- ออกกำลังกาย ---------- */}
-      <section className="space-y-3">
+      <section className="space-y-3 lg:sticky lg:top-20">
         <h2 className="flex items-center gap-2 text-lg">
           <DumbbellIcon size={30} /> ออกกำลังกาย
         </h2>
@@ -254,6 +255,7 @@ export default function DayPlanner({ date }: { date: string }) {
           />
         </div>
       </section>
+      </div>
     </div>
   );
 }
