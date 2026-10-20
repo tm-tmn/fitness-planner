@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useActivity } from "@/lib/useActivity";
+import RestTimer, { TimerStart } from "@/components/RestTimer";
 import { HOTEL_PREFIX, HOTEL_ROUTINE } from "@/lib/hotel";
 import {
   Buddy,
@@ -22,6 +23,18 @@ import {
   WorkoutEntry,
 } from "@/lib/types";
 
+/** ดึงเวลาพักจากโน้ต เช่น "พัก 45 วินาที" หรือ "พัก 1 นาที" (ไม่ระบุแต่มีเซ็ต = 60 วินาที) */
+function restSeconds(notes?: string | null): number | null {
+  if (!notes) return null;
+  const s = notes.match(/พัก\s*(\d+)\s*วินาที/);
+  if (s) return Math.min(Number(s[1]), 600);
+  const m = notes.match(/พัก\s*(\d+)\s*นาที/);
+  if (m) return Math.min(Number(m[1]) * 60, 600);
+  // ท่าที่มีเซ็ตแต่ไม่ได้ระบุเวลาพัก ใช้ค่ามาตรฐาน 60 วินาที
+  if (/\d+\s*เซ็ต/.test(notes)) return 60;
+  return null;
+}
+
 function formatDateHeading(dateStr: string) {
   const d = new Date(dateStr + "T00:00:00");
   return d.toLocaleDateString("th-TH", {
@@ -38,6 +51,7 @@ export default function DayPlanner({ date }: { date: string }) {
   const [workouts, setWorkouts] = useState<WorkoutEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [timerStart, setTimerStart] = useState<TimerStart | null>(null);
   const [hotelOpen, setHotelOpen] = useState(false);
   const [hotelBusy, setHotelBusy] = useState(false);
   const activity = useActivity(meals.filter((m) => m.is_done).length * 1000 + workouts.filter((w) => w.is_done).length);
@@ -258,6 +272,7 @@ export default function DayPlanner({ date }: { date: string }) {
           <DumbbellIcon size={30} /> ออกกำลังกาย
         </h2>
         <div className="card card-alt space-y-2 p-3">
+          <RestTimer start={timerStart} />
           <div className="rounded-2xl border-[3px] border-dashed border-ink bg-[#E6F6FF] p-3">
             <div className="flex items-center gap-2">
               <BedIcon size={30} />
@@ -337,6 +352,18 @@ export default function DayPlanner({ date }: { date: string }) {
                       <span className="mt-0.5 block text-sm opacity-70">
                         {w.notes}
                       </span>
+                    )}
+                    {restSeconds(w.notes) && !w.is_done && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setTimerStart({ seconds: restSeconds(w.notes)!, id: Date.now() });
+                        }}
+                        className="btn btn-ghost btn-sm mt-1"
+                      >
+                        จับเวลาพัก {restSeconds(w.notes)} วิ
+                      </button>
                     )}
                   </span>
                 </label>

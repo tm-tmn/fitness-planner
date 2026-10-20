@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Profile } from "@/lib/types";
+import ShiftPlan from "@/components/ShiftPlan";
 import { Buddy, DumbbellIcon, CalendarIcon, RocketIcon } from "@/components/icons";
 import {
   PROGRAM_NAME,
@@ -340,6 +341,8 @@ export default function ProgramPage() {
           {applying ? "กำลังใส่แผน..." : `เริ่มโปรแกรมนี้ตั้งแต่วันที่เลือก`}
         </button>
       </section>
+
+      <ShiftPlan onChanged={refreshDupCount} />
 
       {(dupCount > 0 || cleanMsg) && (
         <section className="card space-y-2 p-4">
