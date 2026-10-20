@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useActivity } from "@/lib/useActivity";
+import LocationPrompt from "@/components/LocationPrompt";
+import { Coords, mapsSearchUrl, searchTerms } from "@/lib/shopSearch";
 import RestTimer, { TimerStart } from "@/components/RestTimer";
 import { HOTEL_PREFIX, HOTEL_ROUTINE } from "@/lib/hotel";
 import {
@@ -51,6 +53,7 @@ export default function DayPlanner({ date }: { date: string }) {
   const [workouts, setWorkouts] = useState<WorkoutEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [coords, setCoords] = useState<Coords | null>(null);
   const [timerStart, setTimerStart] = useState<TimerStart | null>(null);
   const [hotelOpen, setHotelOpen] = useState(false);
   const [hotelBusy, setHotelBusy] = useState(false);
@@ -248,6 +251,8 @@ export default function DayPlanner({ date }: { date: string }) {
         </div>
       )}
 
+      <LocationPrompt coords={coords} onChange={setCoords} />
+
       <div className="grid items-start gap-6 lg:grid-cols-2">
       {/* ---------- อาหาร ---------- */}
       <section className="space-y-4">
@@ -260,6 +265,7 @@ export default function DayPlanner({ date }: { date: string }) {
             mealType={mt}
             entries={meals.filter((m) => m.meal_type === mt)}
             onAdd={(name) => addMeal(mt, name)}
+            coords={coords}
             onToggle={toggleMeal}
             onDelete={deleteMeal}
           />
@@ -402,11 +408,13 @@ function MealSection({
   mealType,
   entries,
   onAdd,
+  coords,
   onToggle,
   onDelete,
 }: {
   mealType: MealType;
   entries: MealEntry[];
+  coords: Coords | null;
   onAdd: (name: string) => void;
   onToggle: (id: string, done: boolean) => void;
   onDelete: (id: string) => void;
@@ -421,7 +429,8 @@ function MealSection({
       <div className="p-3">
         <ul className="mb-3 space-y-2">
           {entries.map((m) => (
-            <li key={m.id} className="flex items-center justify-between gap-2">
+            <li key={m.id} className="space-y-1">
+              <div className="flex items-center justify-between gap-2">
               <label className="flex flex-1 cursor-pointer items-center gap-3">
                 <input
                   type="checkbox"
@@ -445,6 +454,10 @@ function MealSection({
               >
                 <TrashIcon size={20} />
               </button>
+              </div>
+              {coords && !m.is_done && (
+                <ShopLinks foodName={m.food_name} coords={coords} />
+              )}
             </li>
           ))}
           {entries.length === 0 && (
@@ -453,6 +466,40 @@ function MealSection({
         </ul>
         <AddRow placeholder="เพิ่มเมนูอาหาร" onAdd={onAdd} />
       </div>
+    </div>
+  );
+}
+
+function ShopLinks({ foodName, coords }: { foodName: string; coords: Coords }) {
+  const [open, setOpen] = useState(false);
+  const terms = searchTerms(foodName);
+  if (terms.length === 0) return null;
+  return (
+    <div className="pl-10">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="text-sm font-semibold underline decoration-wavy underline-offset-4"
+      >
+        {open ? "ซ่อน" : "หาที่ซื้อใกล้ฉัน"}
+      </button>
+      {open && (
+        <ul className="mt-1 flex flex-wrap gap-2">
+          {terms.map((t) => (
+            <li key={t}>
+              <a
+                href={mapsSearchUrl(t, coords)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-ghost btn-sm"
+              >
+                {t}
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
