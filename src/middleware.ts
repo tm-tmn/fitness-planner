@@ -10,6 +10,6 @@ export const config = {
     /*
      * ให้ทำงานกับทุก path ยกเว้นไฟล์ static และรูปภาพ
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|offline.html|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

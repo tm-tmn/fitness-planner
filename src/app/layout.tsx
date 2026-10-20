@@ -1,10 +1,17 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import NavBar from "@/components/NavBar";
+import PwaSetup from "@/components/PwaSetup";
 
 export const metadata: Metadata = {
   title: "Fit & Meal Planner",
   description: "ตารางออกกำลังกายและอาหารการกินส่วนตัว",
+  applicationName: "Fit & Meal",
+  icons: {
+    icon: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
+  },
+  appleWebApp: { capable: true, title: "Fit & Meal", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {
@@ -36,6 +43,7 @@ export default function RootLayout({
       <body>
         <NavBar />
         <main className="mx-auto max-w-5xl px-4 pb-28 pt-6 md:px-6 md:pb-10">
+          <PwaSetup />
           {children}
         </main>
       </body>
