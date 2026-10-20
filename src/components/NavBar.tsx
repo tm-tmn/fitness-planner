@@ -11,12 +11,14 @@ import {
   ListIcon,
   SmileIcon,
   SunIcon,
+  TrophyIcon,
 } from "@/components/icons";
 
 const links = [
   { href: "/", label: "วันนี้", Icon: SunIcon },
   { href: "/calendar", label: "ปฏิทิน", Icon: CalendarIcon },
   { href: "/program", label: "โปรแกรม", Icon: ListIcon },
+  { href: "/progress", label: "สถิติ", Icon: TrophyIcon },
   { href: "/profile", label: "โปรไฟล์", Icon: SmileIcon },
 ];
 
@@ -93,13 +95,13 @@ export default function NavBar() {
         aria-label="เมนูหลัก"
         className="fixed inset-x-0 bottom-0 z-10 border-t-[3px] border-ink bg-sun pb-[env(safe-area-inset-bottom)] md:hidden"
       >
-        <ul className="mx-auto grid max-w-md grid-cols-4 gap-1 px-2 py-1.5">
+        <ul className="mx-auto grid max-w-md grid-cols-5 gap-0.5 px-1 py-1.5">
           {links.map(({ href, label, Icon }) => (
             <li key={href}>
               <Link
                 href={href}
                 aria-current={isActive(href) ? "page" : undefined}
-                className={`flex flex-col items-center rounded-2xl border-[3px] px-1 py-0.5 text-xs font-display ${
+                className={`flex flex-col items-center rounded-2xl border-[3px] px-0.5 py-0.5 text-[11px] font-display leading-tight ${
                   isActive(href)
                     ? "border-ink bg-bubble text-white shadow-pop-sm"
                     : "border-transparent"

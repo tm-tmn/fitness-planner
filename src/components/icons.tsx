@@ -279,3 +279,28 @@ export function Buddy({
     </svg>
   );
 }
+
+export const TrophyIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M9 5h14v7q0 7-7 8-7-1-7-8z" fill="#FFD23F" />
+    <path d="M9 8H5q0 6 5 7M23 8h4q0 6-5 7" />
+    <path d="M16 20v4M10 28h12M12 24h8l1 4H11z" fill="#FF6F91" />
+  </Svg>
+);
+
+export const ScaleIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="4" y="5" width="24" height="22" rx="6" fill="#C9B8FF" />
+    <path d="M9 13q7-6 14 0" fill="#fff" />
+    <path d="M16 13l3-3" />
+    <path d="M10 22h12" />
+  </Svg>
+);
+
+export const LockIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="6" y="14" width="20" height="14" rx="4" fill="#E5E2F2" />
+    <path d="M10 14v-3q0-6 6-6t6 6v3" />
+    <path d="M16 20v3" />
+  </Svg>
+);

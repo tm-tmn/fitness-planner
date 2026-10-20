@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useActivity } from "@/lib/useActivity";
 import {
   Buddy,
   DumbbellIcon,
@@ -35,6 +36,7 @@ export default function DayPlanner({ date }: { date: string }) {
   const [workouts, setWorkouts] = useState<WorkoutEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const activity = useActivity(meals.filter((m) => m.is_done).length * 1000 + workouts.filter((w) => w.is_done).length);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -168,6 +170,12 @@ export default function DayPlanner({ date }: { date: string }) {
             <span>
               ทำแล้ว {doneCount}/{total}
             </span>
+            {activity && activity.current > 0 && (
+              <span className="inline-flex items-center gap-1 font-semibold">
+                <FlameIcon size={18} />
+                สตรีค {activity.current} วัน
+              </span>
+            )}
             {kcalPlanned > 0 && (
               <span className="inline-flex items-center gap-1">
                 <FlameIcon size={18} />
