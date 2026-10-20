@@ -3,9 +3,11 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useActivity } from "@/lib/useActivity";
+import { HOTEL_PREFIX, HOTEL_ROUTINE } from "@/lib/hotel";
 import {
   Buddy,
   DumbbellIcon,
+  BedIcon,
   BowlIcon,
   FlameIcon,
   MEAL_ICONS,
@@ -36,6 +38,8 @@ export default function DayPlanner({ date }: { date: string }) {
   const [workouts, setWorkouts] = useState<WorkoutEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hotelOpen, setHotelOpen] = useState(false);
+  const [hotelBusy, setHotelBusy] = useState(false);
   const activity = useActivity(meals.filter((m) => m.is_done).length * 1000 + workouts.filter((w) => w.is_done).length);
 
   const load = useCallback(async () => {
@@ -84,6 +88,38 @@ export default function DayPlanner({ date }: { date: string }) {
     else load();
   }
 
+  async function addHotelRoutine(replaceUnfinished: boolean) {
+    setHotelBusy(true);
+    setError(null);
+    if (replaceUnfinished) {
+      const ids = workouts
+        .filter((w) => !w.is_done && !w.exercise_name.startsWith(HOTEL_PREFIX))
+        .map((w) => w.id);
+      if (ids.length) {
+        const { error } = await supabase
+          .from("workout_entries")
+          .delete()
+          .in("id", ids);
+        if (error) {
+          setError(error.message);
+          setHotelBusy(false);
+          return;
+        }
+      }
+    }
+    const { error } = await supabase.from("workout_entries").insert(
+      HOTEL_ROUTINE.map((r) => ({
+        entry_date: date,
+        exercise_name: HOTEL_PREFIX + r.name,
+        notes: r.notes,
+      }))
+    );
+    if (error) setError(error.message);
+    setHotelOpen(false);
+    setHotelBusy(false);
+    load();
+  }
+
   async function toggleMeal(id: string, is_done: boolean) {
     setMeals((prev) =>
       prev.map((m) => (m.id === id ? { ...m, is_done } : m))
@@ -130,6 +166,12 @@ export default function DayPlanner({ date }: { date: string }) {
     );
   }
 
+  const hotelAdded = workouts.some((w) =>
+    w.exercise_name.startsWith(HOTEL_PREFIX)
+  );
+  const unfinishedOriginal = workouts.filter(
+    (w) => !w.is_done && !w.exercise_name.startsWith(HOTEL_PREFIX)
+  ).length;
   const total = meals.length + workouts.length;
   const doneCount =
     meals.filter((m) => m.is_done).length +
@@ -216,6 +258,60 @@ export default function DayPlanner({ date }: { date: string }) {
           <DumbbellIcon size={30} /> ออกกำลังกาย
         </h2>
         <div className="card card-alt space-y-2 p-3">
+          <div className="rounded-2xl border-[3px] border-dashed border-ink bg-[#E6F6FF] p-3">
+            <div className="flex items-center gap-2">
+              <BedIcon size={30} />
+              <div className="min-w-0 flex-1">
+                <p className="font-display text-sm">อยู่โรงแรมหรือไม่มีที่ออกกำลังกาย?</p>
+                <p className="text-xs opacity-80">
+                  ชุดท่าในห้องพัก ~15 นาที ไม่ใช้อุปกรณ์ ไม่เสียงดัง
+                </p>
+              </div>
+              {hotelAdded ? (
+                <span className="text-sm font-semibold">เพิ่มแล้ว</span>
+              ) : (
+                <button
+                  onClick={() => setHotelOpen((o) => !o)}
+                  className="btn btn-sm shrink-0"
+                  aria-expanded={hotelOpen}
+                >
+                  โหมดห้องพัก
+                </button>
+              )}
+            </div>
+            {hotelOpen && !hotelAdded && (
+              <div className="mt-3 space-y-2 text-sm">
+                <p>
+                  ท่าที่จะเพิ่ม: สควอต วิดพื้นพิงเตียง ลันจ์ สะพานก้น แพลงก์ ยืดเหยียด
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => addHotelRoutine(false)}
+                    disabled={hotelBusy}
+                    className="btn btn-mint btn-sm"
+                  >
+                    เพิ่มชุดห้องพัก
+                  </button>
+                  {unfinishedOriginal > 0 && (
+                    <button
+                      onClick={() => addHotelRoutine(true)}
+                      disabled={hotelBusy}
+                      className="btn btn-pink btn-sm"
+                    >
+                      แทนที่ท่าเดิมที่ยังไม่ติ๊ก ({unfinishedOriginal})
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setHotelOpen(false)}
+                    disabled={hotelBusy}
+                    className="btn btn-ghost btn-sm"
+                  >
+                    ยกเลิก
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
           <ul className="space-y-2">
             {workouts.map((w) => (
               <li
