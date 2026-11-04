@@ -14,6 +14,7 @@ import {
 import LocationPrompt from "@/components/LocationPrompt";
 import MealAdd from "@/components/MealAdd";
 import { RecentRow, buildRecents, pickCopyRows } from "@/lib/recentFoods";
+import { DayProtein, estimateProtein, sumProtein } from "@/lib/protein";
 import { Coords, mapsSearchUrl, searchTerms } from "@/lib/shopSearch";
 import RestTimer, { TimerStart } from "@/components/RestTimer";
 import { HOTEL_PREFIX, HOTEL_ROUTINE } from "@/lib/hotel";
@@ -64,6 +65,7 @@ export default function DayPlanner({ date }: { date: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [kcalTarget, setKcalTarget] = useState<number | null | undefined>(undefined);
+  const [proteinTarget, setProteinTarget] = useState<number | null>(null);
   const [coords, setCoords] = useState<Coords | null>(null);
   const [regionOverride, setRegionOverride] = useState<Region | null>(null);
   const [undo, setUndo] = useState<
@@ -111,11 +113,13 @@ export default function DayPlanner({ date }: { date: string }) {
   useEffect(() => {
     supabase
       .from("profiles")
-      .select("daily_calorie_target")
+      .select("daily_calorie_target,daily_protein_target_g")
       .maybeSingle()
-      .then(({ data }) =>
-        setKcalTarget((data as { daily_calorie_target: number | null } | null)?.daily_calorie_target ?? null)
-      );
+      .then(({ data }) => {
+        const p = data as { daily_calorie_target: number | null; daily_protein_target_g: number | null } | null;
+        setKcalTarget(p?.daily_calorie_target ?? null);
+        setProteinTarget(p?.daily_protein_target_g ?? null);
+      });
   }, [supabase]);
 
   // อาหารที่กินจริงใน 60 วันล่าสุด ใช้ทำปุ่ม "กินบ่อย" (โหลดครั้งเดียว ไม่ผูกกับวันที่เปิดดู)
@@ -400,6 +404,8 @@ export default function DayPlanner({ date }: { date: string }) {
         planned={kcalPlanned}
         eaten={kcalDone}
         missing={meals.filter((m) => !m.calories).length}
+        protein={sumProtein(meals)}
+        proteinTarget={proteinTarget}
       />
 
       {error && (
@@ -611,6 +617,11 @@ const MEAL_TINT: Record<MealType, string> = {
   snack: "bg-[#FFE0E8]",
 };
 
+function proteinLabel(name: string, kcal: number | null): string {
+  const e = estimateProtein(name, kcal);
+  return e ? ` · โปรตีน ~${e.g} ก.` : "";
+}
+
 function MealSection({
   mealType,
   entries,
@@ -660,7 +671,7 @@ function MealSection({
                   {m.food_name}
                   {m.calories ? (
                     <span className="ml-1 text-sm opacity-70">
-                      ({m.calories} kcal)
+                      ({m.calories} kcal{proteinLabel(m.food_name, m.calories)})
                     </span>
                   ) : null}
                 </span>
@@ -755,11 +766,15 @@ function CalorieSummary({
   planned,
   eaten,
   missing,
+  protein,
+  proteinTarget,
 }: {
   target: number | null | undefined;
   planned: number;
   eaten: number;
   missing: number;
+  protein: DayProtein;
+  proteinTarget: number | null;
 }) {
   if (planned === 0 && !target && missing === 0) return null;
   const scale = Math.max(target ?? 0, planned, eaten, 1);
@@ -839,6 +854,8 @@ function CalorieSummary({
         {targetPct !== null && <span>| เส้นดำ = เป้า</span>}
       </p>
 
+      <ProteinBar protein={protein} target={proteinTarget} />
+
       {planDiff !== null && (
         <p className="text-sm">
           {Math.abs(planDiff) <= 100
@@ -862,6 +879,51 @@ function CalorieSummary({
         &quot;กินแล้ว&quot; นับจากมื้อที่คุณติ๊ก ตัวเลขแคลอรี่ของเมนูเป็นค่าประมาณ
       </p>
     </section>
+  );
+}
+
+function ProteinBar({ protein, target }: { protein: DayProtein; target: number | null }) {
+  if (protein.planned === 0 && protein.unknown === 0) return null;
+  const scale = Math.max(target ?? 0, protein.planned, protein.eaten, 1);
+  const eatenPct = Math.min(100, (protein.eaten / scale) * 100);
+  const plannedPct = Math.min(100, (protein.planned / scale) * 100);
+  const targetPct = target ? Math.min(100, (target / scale) * 100) : null;
+  const gap = target ? target - protein.planned : null;
+  return (
+    <div className="space-y-1.5" aria-label="โปรตีนวันนี้">
+      <p className="flex flex-wrap items-baseline justify-between gap-x-3 text-sm">
+        <span className="font-semibold">โปรตีน</span>
+        <span>
+          กินแล้ว ~{protein.eaten.toLocaleString()} ก.
+          {target ? ` จากเป้า ${target.toLocaleString()} ก.` : ""} · แผนทั้งวัน ~{protein.planned.toLocaleString()} ก.
+        </span>
+      </p>
+      <div
+        className="relative h-4 rounded-full border-[3px] border-ink bg-white"
+        role="img"
+        aria-label={`โปรตีนกินแล้ว ${protein.eaten} จากแผน ${protein.planned}${target ? ` เป้า ${target}` : ""} กรัม`}
+      >
+        <div className="absolute inset-y-0 left-0 rounded-l-full bg-sun/70" style={{ width: `${plannedPct}%` }} />
+        <div className="absolute inset-y-0 left-0 rounded-l-full bg-mint" style={{ width: `${eatenPct}%` }} />
+        {targetPct !== null && (
+          <div
+            className="absolute -top-1 -bottom-1 w-[3px] bg-ink"
+            style={{ left: `calc(${targetPct}% - 1.5px)` }}
+            title="เป้าโปรตีน"
+          />
+        )}
+      </div>
+      {gap !== null && gap > 10 && protein.planned > 0 && (
+        <p className="text-sm">แผนวันนี้ได้โปรตีนต่ำกว่าเป้า ~{gap.toLocaleString()} ก. เพิ่มไข่ นม โยเกิร์ตกรีก หรืออกไก่ได้</p>
+      )}
+      {(protein.unknown > 0 || protein.partial > 0) && (
+        <p className="text-xs opacity-70">
+          โปรตีนประเมินจากชื่อเมนูในคลังของแอป เป็นค่าประมาณ
+          {protein.unknown > 0 ? ` มี ${protein.unknown} รายการที่ยังประเมินไม่ได้จึงไม่นับ` : ""}
+          {protein.partial > 0 ? ` และ ${protein.partial} รายการนับได้แค่บางส่วน` : ""}
+        </p>
+      )}
+    </div>
   );
 }
 

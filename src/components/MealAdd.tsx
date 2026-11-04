@@ -164,6 +164,7 @@ export default function MealAdd({
     else if (est)
       hint =
         `ประเมินจาก ${est.matched.join(" + ")}` +
+        (est.protein > 0 ? ` · โปรตีน ~${Math.round(est.protein * portion)} ก.` : "") +
         (est.unmatched.length ? ` (ยังไม่รู้จัก: ${est.unmatched.join(", ")})` : "");
     else hint = "คลังยังไม่รู้จักเมนูนี้ ลองให้ AI ประเมิน หรือใส่แคลอรี่เอง";
   }

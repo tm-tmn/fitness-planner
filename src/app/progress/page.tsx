@@ -10,6 +10,7 @@ import { ActivityLevel, Gender, calculateTargets } from "@/lib/calorie";
 import { BADGES, localDateStr } from "@/lib/streak";
 import { useActivity } from "@/lib/useActivity";
 import WeeklySummary from "@/components/WeeklySummary";
+import TrendCard from "@/components/TrendCard";
 import {
   Buddy,
   FlameIcon,
@@ -296,6 +297,9 @@ export default function ProgressPage() {
           </ul>
         )}
       </section>
+
+      {/* ---------- แนวโน้มน้ำหนัก → ปรับเป้า ---------- */}
+      <TrendCard logs={logs} profile={profile} blocked={!!suggestion} onApplied={load} />
 
       {/* ---------- แคลอรี่ย้อนหลัง ---------- */}
       <section className="card space-y-3 p-4">

@@ -159,6 +159,7 @@ export const WORKOUT_DAYS: WorkoutDayTemplate[] = [
 interface MealTemplate {
   food_name: string;
   calories: number; // อ้างอิงที่ 1800 kcal/วัน
+  protein: number; // โปรตีนโดยประมาณ (ก.) ที่อ้างอิง 1800 kcal/วัน
 }
 interface DayMealTemplate {
   breakfast: MealTemplate;
@@ -169,50 +170,65 @@ interface DayMealTemplate {
 
 export const MEAL_CYCLE: DayMealTemplate[] = [
   {
-    breakfast: { food_name: "ไข่ต้ม 2 ฟอง + ขนมปังโฮลวีต 2 แผ่น + อะโวคาโด", calories: 450 },
-    lunch: { food_name: "ข้าวกล้อง + อกไก่ย่าง + ผักรวมผัดน้ำมันน้อย", calories: 630 },
-    dinner: { food_name: "ปลานึ่งมะนาว + ข้าวกล้องครึ่งจาน + ผักลวก", calories: 540 },
-    snack: { food_name: "โยเกิร์ตกรีกรสธรรมชาติ + กล้วยหอม", calories: 180 },
+    breakfast: { food_name: "ไข่ต้ม 2 ฟอง + ขนมปังโฮลวีต 2 แผ่น + อะโวคาโด", calories: 450, protein: 22 },
+    lunch: { food_name: "ข้าวกล้อง + อกไก่ย่าง + ผักรวมผัดน้ำมันน้อย", calories: 630, protein: 45 },
+    dinner: { food_name: "ปลานึ่งมะนาว + ข้าวกล้องครึ่งจาน + ผักลวก", calories: 540, protein: 38 },
+    snack: { food_name: "โยเกิร์ตกรีกรสธรรมชาติ + กล้วยหอม", calories: 180, protein: 13 },
   },
   {
-    breakfast: { food_name: "โจ๊กอกไก่ฉีก + ไข่ลวก", calories: 450 },
-    lunch: { food_name: "สลัดอกไก่ย่าง + ข้าวกล้อง/ควินัว + ไข่ต้ม", calories: 630 },
-    dinner: { food_name: "แกงจืดเต้าหู้หมูสับ + ข้าวกล้อง", calories: 540 },
-    snack: { food_name: "นมถั่วเหลืองไม่หวาน + ถั่วอบไม่ปรุงรส", calories: 180 },
+    breakfast: { food_name: "โจ๊กอกไก่ฉีก + ไข่ลวก", calories: 450, protein: 28 },
+    lunch: { food_name: "สลัดอกไก่ย่าง + ข้าวกล้อง/ควินัว + ไข่ต้ม", calories: 630, protein: 42 },
+    dinner: { food_name: "แกงจืดเต้าหู้หมูสับ + ข้าวกล้อง", calories: 540, protein: 28 },
+    snack: { food_name: "นมถั่วเหลืองไม่หวาน + ถั่วอบไม่ปรุงรส", calories: 180, protein: 10 },
   },
   {
-    breakfast: { food_name: "แซนด์วิชทูน่า + ไข่ขาวต้ม", calories: 450 },
-    lunch: { food_name: "ข้าวผัดอกไก่ใส่ไข่ (น้ำมันน้อย) + แตงกวา", calories: 630 },
-    dinner: { food_name: "ต้มยำกุ้งน้ำใส + ข้าวกล้อง", calories: 540 },
-    snack: { food_name: "ไข่ต้ม 2 ฟอง", calories: 180 },
+    breakfast: { food_name: "แซนด์วิชทูน่า + ไข่ขาวต้ม", calories: 450, protein: 28 },
+    lunch: { food_name: "ข้าวผัดอกไก่ใส่ไข่ (น้ำมันน้อย) + แตงกวา", calories: 630, protein: 38 },
+    dinner: { food_name: "ต้มยำกุ้งน้ำใส + ข้าวกล้อง", calories: 540, protein: 24 },
+    snack: { food_name: "ไข่ต้ม 2 ฟอง", calories: 180, protein: 12 },
   },
   {
-    breakfast: { food_name: "ข้าวต้มปลา + ไข่ลวก", calories: 450 },
-    lunch: { food_name: "สเต็กอกไก่ + มันหวานอบ + ผักย่าง", calories: 630 },
-    dinner: { food_name: "ยำวุ้นเส้นทะเล + ข้าวกล้องเล็กน้อย", calories: 540 },
-    snack: { food_name: "เวย์โปรตีน 1 สกู๊ป + กล้วยหอม", calories: 180 },
+    breakfast: { food_name: "ข้าวต้มปลา + ไข่ลวก", calories: 450, protein: 25 },
+    lunch: { food_name: "สเต็กอกไก่ + มันหวานอบ + ผักย่าง", calories: 630, protein: 45 },
+    dinner: { food_name: "ยำวุ้นเส้นทะเล + ข้าวกล้องเล็กน้อย", calories: 540, protein: 28 },
+    snack: { food_name: "เวย์โปรตีน 1 สกู๊ป + กล้วยหอม", calories: 180, protein: 25 },
   },
   {
-    breakfast: { food_name: "โยเกิร์ตกรีก + กราโนล่า + ผลไม้สด", calories: 450 },
-    lunch: { food_name: "ข้าวกล้อง + ปลาแซลมอนย่าง + บรอกโคลีนึ่ง", calories: 630 },
-    dinner: { food_name: "สุกี้น้ำทะเล (กุ้ง/ปลาหมึก) + วุ้นเส้น", calories: 540 },
-    snack: { food_name: "ถั่วรวมอบ + นมจืดไขมันต่ำ", calories: 180 },
+    breakfast: { food_name: "โยเกิร์ตกรีก + กราโนล่า + ผลไม้สด", calories: 450, protein: 22 },
+    lunch: { food_name: "ข้าวกล้อง + ปลาแซลมอนย่าง + บรอกโคลีนึ่ง", calories: 630, protein: 40 },
+    dinner: { food_name: "สุกี้น้ำทะเล (กุ้ง/ปลาหมึก) + วุ้นเส้น", calories: 540, protein: 32 },
+    snack: { food_name: "ถั่วรวมอบ + นมจืดไขมันต่ำ", calories: 180, protein: 12 },
   },
   {
-    breakfast: { food_name: "ไข่เจียวผัก + ข้าวกล้อง", calories: 450 },
-    lunch: { food_name: "ข้าวมันไก่ต้ม (ไม่เอาหนัง น้ำมันน้อย) + ซุปแตงกวา", calories: 630 },
-    dinner: { food_name: "พะแนงไก่กะทิน้อย + ข้าวกล้อง", calories: 540 },
-    snack: { food_name: "ผลไม้รวม + ไข่ต้ม", calories: 180 },
+    breakfast: { food_name: "ไข่เจียวผัก + ข้าวกล้อง", calories: 450, protein: 17 },
+    lunch: { food_name: "ข้าวมันไก่ต้ม (ไม่เอาหนัง น้ำมันน้อย) + ซุปแตงกวา", calories: 630, protein: 35 },
+    dinner: { food_name: "พะแนงไก่กะทิน้อย + ข้าวกล้อง", calories: 540, protein: 32 },
+    snack: { food_name: "ผลไม้รวม + ไข่ต้ม", calories: 180, protein: 8 },
   },
   {
-    breakfast: { food_name: "แพนเค้กข้าวโอ๊ตกล้วยหอม + ไข่ขาว", calories: 450 },
-    lunch: { food_name: "ข้าวกล้อง + หมูสันในย่าง + สลัดผัก", calories: 630 },
-    dinner: { food_name: "ซุปไข่ผัก + ขนมปังโฮลวีต + อกไก่ฉีก", calories: 540 },
-    snack: { food_name: "โยเกิร์ต + เมล็ดเจีย", calories: 180 },
+    breakfast: { food_name: "แพนเค้กข้าวโอ๊ตกล้วยหอม + ไข่ขาว", calories: 450, protein: 20 },
+    lunch: { food_name: "ข้าวกล้อง + หมูสันในย่าง + สลัดผัก", calories: 630, protein: 42 },
+    dinner: { food_name: "ซุปไข่ผัก + ขนมปังโฮลวีต + อกไก่ฉีก", calories: 540, protein: 40 },
+    snack: { food_name: "โยเกิร์ต + เมล็ดเจีย", calories: 180, protein: 9 },
   },
 ];
 
 const REFERENCE_DAILY_CALORIES = 1800;
+
+let programRefs: Map<string, { kcal: number; protein: number }> | null = null;
+
+/** ค่าอ้างอิง (แคลอรี่, โปรตีน) ของเมนูในโปรแกรม ที่ระดับ 1800 kcal/วัน — ใช้ประเมินโปรตีนของรายการที่ถูกสเกลแล้ว */
+export function programMealRef(name: string): { kcal: number; protein: number } | null {
+  if (!programRefs) {
+    programRefs = new Map();
+    for (const day of MEAL_CYCLE) {
+      for (const m of Object.values(day)) {
+        programRefs.set(m.food_name.trim(), { kcal: m.calories, protein: m.protein });
+      }
+    }
+  }
+  return programRefs.get(name.trim()) ?? null;
+}
 
 export interface GeneratedWorkoutEntry {
   entry_date: string;
