@@ -185,7 +185,11 @@ export default function ProgressPage() {
       )}
 
       {/* ---------- สรุปสัปดาห์ ---------- */}
-      <WeeklySummary target={profile?.daily_calorie_target ?? null} weights={logs} />
+      <WeeklySummary
+        target={profile?.daily_calorie_target ?? null}
+        proteinTarget={profile?.daily_protein_target_g ?? null}
+        weights={logs}
+      />
 
       {/* ---------- น้ำหนัก ---------- */}
       <section className="card card-alt space-y-4 p-4">

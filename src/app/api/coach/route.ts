@@ -21,6 +21,9 @@ const FIELDS: Record<string, { min: number; max: number }> = {
   avgEaten: { min: 0, max: 8000 },
   target: { min: 0, max: 8000 },
   daysNearTarget: { min: 0, max: 7 },
+  avgProtein: { min: 0, max: 600 },
+  proteinTarget: { min: 0, max: 600 },
+  daysProteinMet: { min: 0, max: 7 },
   weightChange: { min: -30, max: 30 },
 };
 
@@ -34,6 +37,9 @@ const LABELS: Record<string, string> = {
   avgEaten: "แคลอรี่เฉลี่ยต่อวันที่กิน (kcal)",
   target: "เป้าหมายแคลอรี่ต่อวัน (kcal)",
   daysNearTarget: "จำนวนวันที่แคลอรี่ใกล้เป้า (80-105%)",
+  avgProtein: "โปรตีนเฉลี่ยต่อวัน (ก. ประเมินคร่าวๆ จากชื่อเมนู)",
+  proteinTarget: "เป้าโปรตีนต่อวัน (ก.)",
+  daysProteinMet: "จำนวนวันที่โปรตีนถึง 90% ของเป้า",
   weightChange: "น้ำหนักเปลี่ยนในสัปดาห์ (กก.)",
 };
 

@@ -26,9 +26,11 @@ function readCached(to: string): string | null {
 /** สรุป 7 วันล่าสุด + เคล็ดลับ (จากกฎในแอปทันที และจาก AI เมื่อกดขอ) */
 export default function WeeklySummary({
   target,
+  proteinTarget = null,
   weights,
 }: {
   target: number | null;
+  proteinTarget?: number | null;
   weights: WeightRow[];
 }) {
   const supabase = useMemo(() => createClient(), []);
@@ -44,7 +46,7 @@ export default function WeeklySummary({
       const [m, w] = await Promise.all([
         supabase
           .from("meal_entries")
-          .select("entry_date,calories,is_done")
+          .select("entry_date,calories,is_done,food_name")
           .gte("entry_date", from)
           .lte("entry_date", today)
           .range(0, 9999),
@@ -67,8 +69,8 @@ export default function WeeklySummary({
   }, [today]);
 
   const stats: WeekStats | null = useMemo(
-    () => (rows ? computeWeek(rows.meals, rows.workouts, weights, today, target) : null),
-    [rows, weights, today, target]
+    () => (rows ? computeWeek(rows.meals, rows.workouts, weights, today, target, proteinTarget) : null),
+    [rows, weights, today, target, proteinTarget]
   );
 
   async function askCoach() {
@@ -86,6 +88,9 @@ export default function WeeklySummary({
       avgEaten: stats.avgEaten,
       target: stats.target,
       daysNearTarget: stats.daysNearTarget,
+      avgProtein: stats.avgProtein,
+      proteinTarget: stats.proteinTarget,
+      daysProteinMet: stats.daysProteinMet,
       weightChange: stats.weightChange,
     };
     try {
@@ -128,7 +133,11 @@ export default function WeeklySummary({
   }
 
   const range = `${format(parseISO(stats.from), "d MMM", { locale: th })} – ${format(parseISO(stats.to), "d MMM", { locale: th })}`;
-  const diff = stats.prevTickPct !== null ? stats.tickPct - stats.prevTickPct : null;
+  // ไม่โชว์ "+0%" ตอนที่ทั้งสองสัปดาห์ยังไม่ได้ติ๊กอะไรเลย
+  const diff =
+    stats.prevTickPct !== null && (stats.tickPct > 0 || stats.prevTickPct > 0)
+      ? stats.tickPct - stats.prevTickPct
+      : null;
   const tiles: { label: string; value: string; sub?: string }[] = [
     {
       label: "ติ๊กแล้ว",
@@ -152,6 +161,15 @@ export default function WeeklySummary({
           : "ยังไม่ได้ติ๊กกิน",
     },
   ];
+  if (stats.avgProtein !== null) {
+    tiles.push({
+      label: "โปรตีนเฉลี่ย",
+      value: `~${stats.avgProtein} ก.`,
+      sub: stats.proteinTarget
+        ? `ต่อวัน · ถึงเป้า ${stats.daysProteinMet}/${stats.proteinDays} วัน (เป้า ${stats.proteinTarget} ก.)`
+        : "ต่อวัน (ประเมินจากชื่อเมนู)",
+    });
+  }
   if (stats.weightChange !== null) {
     tiles.push({
       label: "น้ำหนัก",

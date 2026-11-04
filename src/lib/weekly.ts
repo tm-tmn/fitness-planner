@@ -1,9 +1,12 @@
 import { addDays, format, parseISO } from "date-fns";
+import { estimateProtein } from "@/lib/protein";
 
 export interface MealRow {
   entry_date: string;
   calories: number | null;
   is_done: boolean;
+  /** ใช้ประเมินโปรตีน (ไม่ใส่ก็ได้) */
+  food_name?: string;
 }
 export interface WorkoutRow {
   entry_date: string;
@@ -33,6 +36,13 @@ export interface WeekStats {
   target: number | null;
   /** จำนวนวันที่แคลอรี่ที่กินอยู่ในช่วง 80–105% ของเป้า */
   daysNearTarget: number;
+  /** โปรตีนเฉลี่ยต่อวัน (ก.) ของวันเดียวกับที่ใช้คิดแคลอรี่เฉลี่ย ประเมินจากชื่อเมนู */
+  avgProtein: number | null;
+  proteinTarget: number | null;
+  /** จำนวนวันที่โปรตีนถึง 90% ของเป้าขึ้นไป */
+  daysProteinMet: number;
+  /** จำนวนวันที่ประเมินโปรตีนได้ (ตัวหารของค่าเฉลี่ยโปรตีน) */
+  proteinDays: number;
   /** น้ำหนักเปลี่ยนในสัปดาห์ (กก.) จากบันทึกที่มีอย่างน้อย 2 ค่าในช่วง 7 วัน + ค่าก่อนหน้า */
   weightChange: number | null;
 }
@@ -48,7 +58,8 @@ export function computeWeek(
   workouts: WorkoutRow[],
   weights: WeightRow[],
   today: string,
-  target: number | null
+  target: number | null,
+  proteinTarget: number | null = null
 ): WeekStats {
   const end = parseISO(today);
   const from = ymd(addDays(end, -6));
@@ -69,36 +80,50 @@ export function computeWeek(
   const prevDone = pm.filter((m) => m.is_done).length + pw.filter((w) => w.is_done).length;
 
   // วันที่ติ๊กครบ: มีรายการและติ๊กหมดทุกอย่างของวันนั้น
-  const perDay = new Map<string, { total: number; done: number; eaten: number }>();
-  const bump = (d: string, done: boolean, kcal: number) => {
-    const cur = perDay.get(d) ?? { total: 0, done: 0, eaten: 0 };
+  const perDay = new Map<string, { total: number; done: number; eaten: number; protein: number; proteinKnown: boolean }>();
+  const bump = (d: string, done: boolean, kcal: number, protein: number | null) => {
+    const cur = perDay.get(d) ?? { total: 0, done: 0, eaten: 0, protein: 0, proteinKnown: false };
     cur.total++;
     if (done) {
       cur.done++;
       cur.eaten += kcal;
+      if (protein !== null) {
+        cur.protein += protein;
+        cur.proteinKnown = true;
+      }
     }
     perDay.set(d, cur);
   };
-  wm.forEach((m) => bump(m.entry_date, m.is_done, m.calories ?? 0));
-  ww.forEach((w) => bump(w.entry_date, w.is_done, 0));
+  wm.forEach((m) => {
+    const p = m.is_done && m.food_name ? estimateProtein(m.food_name, m.calories)?.g ?? null : null;
+    bump(m.entry_date, m.is_done, m.calories ?? 0, p);
+  });
+  ww.forEach((w) => bump(w.entry_date, w.is_done, 0, null));
 
   let completeDays = 0;
-  let eatenList: number[] = [];
-  let todayEaten = 0;
+  type Eaten = { kcal: number; protein: number | null };
+  let eatenList: Eaten[] = [];
+  let todayEaten: Eaten | null = null;
   for (const [d, v] of perDay) {
     if (v.total > 0 && v.done === v.total) completeDays++;
     if (v.eaten > 0) {
-      if (d === today) todayEaten = v.eaten;
-      else eatenList.push(v.eaten);
+      const e = { kcal: v.eaten, protein: v.proteinKnown ? v.protein : null };
+      if (d === today) todayEaten = e;
+      else eatenList.push(e);
     }
   }
   // วันนี้ยังไม่จบ จึงไม่นับในค่าเฉลี่ย (ไม่งั้นดูเหมือนกินน้อยกว่าจริง) ยกเว้นไม่มีวันอื่นให้เทียบเลย
-  if (eatenList.length === 0 && todayEaten > 0) eatenList = [todayEaten];
+  if (eatenList.length === 0 && todayEaten) eatenList = [todayEaten];
   const avgEaten = eatenList.length
-    ? Math.round(eatenList.reduce((a, b) => a + b, 0) / eatenList.length)
+    ? Math.round(eatenList.reduce((a, b) => a + b.kcal, 0) / eatenList.length)
     : null;
+  const proteinDays = eatenList.filter((e) => e.protein !== null).map((e) => e.protein as number);
+  const avgProtein = proteinDays.length
+    ? Math.round(proteinDays.reduce((a, b) => a + b, 0) / proteinDays.length)
+    : null;
+  const daysProteinMet = proteinTarget ? proteinDays.filter((p) => p >= proteinTarget * 0.9).length : 0;
   const daysNearTarget = target
-    ? eatenList.filter((e) => e >= target * 0.8 && e <= target * 1.05).length
+    ? eatenList.filter((e) => e.kcal >= target * 0.8 && e.kcal <= target * 1.05).length
     : 0;
 
   // น้ำหนัก: ค่าสุดท้ายในสัปดาห์ เทียบกับค่าล่าสุดก่อนสัปดาห์ (ถ้าไม่มี ใช้ค่าแรกในสัปดาห์)
@@ -126,6 +151,10 @@ export function computeWeek(
     eatenDays: eatenList.length,
     target,
     daysNearTarget,
+    avgProtein,
+    proteinTarget,
+    daysProteinMet,
+    proteinDays: proteinDays.length,
     weightChange,
   };
 }
@@ -146,6 +175,9 @@ export function localTip(s: WeekStats): string {
     if (diff < -s.target * 0.25) {
       return `กินเฉลี่ยต่ำกว่าเป้า ~${Math.round(-diff).toLocaleString()} kcal ต่อวัน ถ้าหิวบ่อยลองเพิ่มโปรตีนในมื้อเช้า เช่น ไข่หรืออกไก่ แทนที่จะอดแล้วไปกินเยอะทีหลัง`;
     }
+  }
+  if (s.proteinTarget && s.avgProtein !== null && s.eatenDays >= 3 && s.avgProtein < s.proteinTarget * 0.8) {
+    return `โปรตีนเฉลี่ย ~${s.avgProtein} ก./วัน ต่ำกว่าเป้า ${s.proteinTarget} ก. ลองเพิ่มไข่ 2 ฟอง นมหรือโยเกิร์ตกรีกหนึ่งถ้วยต่อวัน ช่วยรักษากล้ามเนื้อระหว่างลดน้ำหนัก`;
   }
   if (s.workoutsTotal > 0 && s.workoutsDone / s.workoutsTotal < 0.5) {
     return "มื้ออาหารทำได้ดี แต่การออกกำลังกายยังติ๊กไม่ถึงครึ่ง ลองกำหนดเวลาไว้ล่วงหน้าหนึ่งวัน เช่น หลังตื่นนอน 15 นาที";

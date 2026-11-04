@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
+import Link from "next/link";
 import { addDays, format, parseISO } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { useActivity } from "@/lib/useActivity";
@@ -456,9 +457,14 @@ export default function DayPlanner({ date }: { date: string }) {
           <h2 className="flex items-center gap-2 text-lg">
             <BowlIcon size={30} /> มื้ออาหาร
           </h2>
-          <button onClick={copyYesterday} disabled={copyBusy} className="btn btn-ghost btn-sm">
-            {copyBusy ? "กำลังก๊อป..." : "ก๊อปมื้อเมื่อวาน"}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/shopping" className="btn btn-ghost btn-sm">
+              รายการซื้อของ
+            </Link>
+            <button onClick={copyYesterday} disabled={copyBusy} className="btn btn-ghost btn-sm">
+              {copyBusy ? "กำลังก๊อป..." : "ก๊อปมื้อเมื่อวาน"}
+            </button>
+          </div>
         </div>
         {copyMsg && (
           <p className="text-sm" role="status">

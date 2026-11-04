@@ -55,9 +55,10 @@ export default function NavBar() {
     <>
       <header className="sticky top-0 z-10 border-b-[3px] border-ink bg-sun">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-2 md:px-6">
-          <Link href="/" className="flex shrink-0 items-center gap-2 whitespace-nowrap font-display text-lg">
+          <Link href="/" aria-label="Fit & Meal หน้าแรก" className="flex shrink-0 items-center gap-2 whitespace-nowrap font-display text-lg">
             <Buddy size={40} />
-            <span>Fit &amp; Meal</span>
+            {/* จอขนาดแท็บเล็ต (md) มีแท็บเมนูอยู่บนแถบนี้ด้วย จึงซ่อนชื่อแอปไว้ไม่ให้ล้นจอ */}
+            <span className="md:hidden lg:inline">Fit &amp; Meal</span>
           </Link>
 
           {/* เมนูบนจอกว้าง */}
@@ -82,8 +83,8 @@ export default function NavBar() {
               </span>
               <button onClick={signOut} className="btn btn-ghost btn-sm">
                 <DoorIcon size={20} />
-                <span className="hidden sm:inline">ออกจากระบบ</span>
-                <span className="sm:hidden">ออก</span>
+                <span className="hidden lg:inline">ออกจากระบบ</span>
+                <span className="lg:hidden">ออก</span>
               </button>
             </div>
           )}
