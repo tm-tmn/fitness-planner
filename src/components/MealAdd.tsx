@@ -70,9 +70,12 @@ export default function MealAdd({
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ text: value.trim() }),
+        signal: AbortSignal.timeout(20000),
       });
       if (res.status === 501) {
         setAiMsg("ยังไม่ได้เปิดใช้ AI ในเซิร์ฟเวอร์ ใส่แคลอรี่เองได้เลย");
+      } else if (res.status === 504) {
+        setAiMsg("AI ตอบช้าเกินไป ลองใหม่อีกครั้งหรือใส่แคลอรี่เอง");
       } else if (!res.ok) {
         setAiMsg("AI ประเมินไม่สำเร็จ ลองใหม่หรือใส่แคลอรี่เอง");
       } else {
@@ -80,8 +83,9 @@ export default function MealAdd({
         setAi({ kcal: data.kcal, note: data.note ?? "" });
         setManual(false);
       }
-    } catch {
-      setAiMsg("เชื่อมต่อไม่ได้ ลองใหม่หรือใส่แคลอรี่เอง");
+    } catch (e) {
+      const slow = e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError");
+      setAiMsg(slow ? "AI ตอบช้าเกินไป ลองใหม่อีกครั้งหรือใส่แคลอรี่เอง" : "เชื่อมต่อไม่ได้ ลองใหม่หรือใส่แคลอรี่เอง");
     } finally {
       setAiBusy(false);
     }
