@@ -11,6 +11,7 @@ import {
   suggestMenus,
 } from "@/lib/regionalMenus";
 import LocationPrompt from "@/components/LocationPrompt";
+import MealAdd from "@/components/MealAdd";
 import { Coords, mapsSearchUrl, searchTerms } from "@/lib/shopSearch";
 import RestTimer, { TimerStart } from "@/components/RestTimer";
 import { HOTEL_PREFIX, HOTEL_ROUTINE } from "@/lib/hotel";
@@ -616,7 +617,7 @@ function MealSection({
             <li className="text-sm opacity-60">ยังไม่มีรายการ</li>
           )}
         </ul>
-        <AddRow placeholder="เพิ่มเมนูอาหาร" onAdd={onAdd} withKcal />
+        <MealAdd onAdd={onAdd} />
       </div>
     </div>
   );

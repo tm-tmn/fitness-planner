@@ -442,3 +442,12 @@ export function menuCount(): number {
     0
   );
 }
+
+/** เมนูทั้งหมดในคลัง (ทุกภูมิภาค/ทุกมื้อ) ใช้ค้นหาตอนเพิ่มมื้อเอง */
+export function allMenuItems(): MenuItem[] {
+  const out: MenuItem[] = [];
+  for (const byMeal of Object.values(parsed)) {
+    for (const list of Object.values(byMeal)) out.push(...list);
+  }
+  return out;
+}
