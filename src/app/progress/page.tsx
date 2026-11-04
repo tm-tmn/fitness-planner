@@ -9,6 +9,7 @@ import { Profile } from "@/lib/types";
 import { ActivityLevel, Gender, calculateTargets } from "@/lib/calorie";
 import { BADGES, localDateStr } from "@/lib/streak";
 import { useActivity } from "@/lib/useActivity";
+import WeeklySummary from "@/components/WeeklySummary";
 import {
   Buddy,
   FlameIcon,
@@ -181,6 +182,9 @@ export default function ProgressPage() {
           {error}
         </div>
       )}
+
+      {/* ---------- สรุปสัปดาห์ ---------- */}
+      <WeeklySummary target={profile?.daily_calorie_target ?? null} weights={logs} />
 
       {/* ---------- น้ำหนัก ---------- */}
       <section className="card card-alt space-y-4 p-4">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { addDays, format, parseISO } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { useActivity } from "@/lib/useActivity";
 import {
@@ -12,6 +13,7 @@ import {
 } from "@/lib/regionalMenus";
 import LocationPrompt from "@/components/LocationPrompt";
 import MealAdd from "@/components/MealAdd";
+import { RecentRow, buildRecents, pickCopyRows } from "@/lib/recentFoods";
 import { Coords, mapsSearchUrl, searchTerms } from "@/lib/shopSearch";
 import RestTimer, { TimerStart } from "@/components/RestTimer";
 import { HOTEL_PREFIX, HOTEL_ROUTINE } from "@/lib/hotel";
@@ -70,6 +72,9 @@ export default function DayPlanner({ date }: { date: string }) {
   const region: Region | null = coords
     ? regionOverride ?? detectRegion(coords.lat, coords.lng)
     : null;
+  const [recentRows, setRecentRows] = useState<RecentRow[]>([]);
+  const [copyBusy, setCopyBusy] = useState(false);
+  const [copyMsg, setCopyMsg] = useState<string | null>(null);
   const [timerStart, setTimerStart] = useState<TimerStart | null>(null);
   const [hotelOpen, setHotelOpen] = useState(false);
   const [hotelBusy, setHotelBusy] = useState(false);
@@ -112,6 +117,57 @@ export default function DayPlanner({ date }: { date: string }) {
         setKcalTarget((data as { daily_calorie_target: number | null } | null)?.daily_calorie_target ?? null)
       );
   }, [supabase]);
+
+  // อาหารที่กินจริงใน 60 วันล่าสุด ใช้ทำปุ่ม "กินบ่อย" (โหลดครั้งเดียว ไม่ผูกกับวันที่เปิดดู)
+  useEffect(() => {
+    const from = format(addDays(new Date(), -60), "yyyy-MM-dd");
+    supabase
+      .from("meal_entries")
+      .select("meal_type,food_name,calories,entry_date,is_done")
+      .eq("is_done", true)
+      .gte("entry_date", from)
+      .order("entry_date", { ascending: false })
+      .range(0, 999)
+      .then(({ data }) => setRecentRows((data as RecentRow[] | null) ?? []));
+  }, [supabase]);
+
+  async function copyYesterday() {
+    setCopyBusy(true);
+    setCopyMsg(null);
+    const y = format(addDays(parseISO(date), -1), "yyyy-MM-dd");
+    const { data, error } = await supabase
+      .from("meal_entries")
+      .select("meal_type,food_name,calories")
+      .eq("entry_date", y)
+      .order("created_at", { ascending: true });
+    if (error) {
+      setError(error.message);
+      setCopyBusy(false);
+      return;
+    }
+    const { rows, skipped } = pickCopyRows(
+      (data as { meal_type: MealType; food_name: string; calories: number | null }[] | null) ?? [],
+      meals
+    );
+    if (rows.length === 0) {
+      setCopyMsg(
+        skipped > 0
+          ? "เมนูของเมื่อวานมีอยู่ในวันนี้แล้วทั้งหมด"
+          : "เมื่อวานยังไม่มีรายการมื้ออาหารให้ก๊อป"
+      );
+      setCopyBusy(false);
+      return;
+    }
+    const { error: insErr } = await supabase
+      .from("meal_entries")
+      .insert(rows.map((r) => ({ entry_date: date, ...r })));
+    if (insErr) setError(insErr.message);
+    else {
+      setCopyMsg(`ก๊อปจากเมื่อวานมา ${rows.length} รายการ${skipped ? ` (ข้าม ${skipped} ที่ซ้ำ)` : ""} ยังไม่ติ๊ก`);
+      load();
+    }
+    setCopyBusy(false);
+  }
 
   async function addMeal(meal_type: MealType, food_name: string, calories?: number | null) {
     if (!food_name.trim()) return;
@@ -390,15 +446,30 @@ export default function DayPlanner({ date }: { date: string }) {
       <div className="grid items-start gap-6 lg:grid-cols-2">
       {/* ---------- อาหาร ---------- */}
       <section className="space-y-4">
-        <h2 className="flex items-center gap-2 text-lg">
-          <BowlIcon size={30} /> มื้ออาหาร
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="flex items-center gap-2 text-lg">
+            <BowlIcon size={30} /> มื้ออาหาร
+          </h2>
+          <button onClick={copyYesterday} disabled={copyBusy} className="btn btn-ghost btn-sm">
+            {copyBusy ? "กำลังก๊อป..." : "ก๊อปมื้อเมื่อวาน"}
+          </button>
+        </div>
+        {copyMsg && (
+          <p className="text-sm" role="status">
+            {copyMsg}
+          </p>
+        )}
         {MEAL_TYPE_ORDER.map((mt) => (
           <MealSection
             key={mt}
             mealType={mt}
             entries={meals.filter((m) => m.meal_type === mt)}
             onAdd={(name, kcal) => addMeal(mt, name, kcal)}
+            recents={buildRecents(
+              recentRows,
+              mt,
+              meals.filter((m) => m.meal_type === mt).map((m) => m.food_name)
+            )}
             coords={coords}
             region={region}
             onSwap={(id, name, kcal) => swapMeals([{ id, food_name: name, calories: kcal }])}
@@ -544,6 +615,7 @@ function MealSection({
   mealType,
   entries,
   onAdd,
+  recents,
   coords,
   region,
   onSwap,
@@ -556,6 +628,7 @@ function MealSection({
   region: Region | null;
   onSwap: (id: string, name: string, kcal: number) => void;
   onAdd: (name: string, kcal?: number | null) => void;
+  recents: { name: string; kcal: number | null }[];
   onToggle: (id: string, done: boolean) => void;
   onDelete: (id: string) => void;
 }) {
@@ -617,7 +690,7 @@ function MealSection({
             <li className="text-sm opacity-60">ยังไม่มีรายการ</li>
           )}
         </ul>
-        <MealAdd onAdd={onAdd} />
+        <MealAdd onAdd={onAdd} recents={recents} />
       </div>
     </div>
   );
